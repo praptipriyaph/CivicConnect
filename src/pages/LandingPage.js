@@ -22,7 +22,7 @@ const LandingPage = ({ onNavigate }) => {
             <div className="flex items-center space-x-3">
               <Building className="w-8 h-8 text-blue-600" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Citizen Portal</h1>
+                <h1 className="text-xl font-bold text-gray-900">Civic Connect</h1>
                 <p className="text-sm text-gray-600">Government Services</p>
               </div>
             </div>
@@ -159,7 +159,7 @@ const LandingPage = ({ onNavigate }) => {
               <div className="flex items-center space-x-3 mb-4">
                 <Building className="w-8 h-8 text-blue-400" />
                 <div>
-                  <h3 className="font-bold">Citizen Portal</h3>
+                  <h3 className="font-bold">Civic Connect</h3>
                   <p className="text-sm text-gray-400">Government Services</p>
                 </div>
               </div>
@@ -208,7 +208,7 @@ const LandingPage = ({ onNavigate }) => {
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Citizen Portal. All rights reserved. | Privacy Policy | Terms of Service</p>
+            <p>&copy; 2024 Civic Connect. All rights reserved. | Privacy Policy | Terms of Service</p>
           </div>
         </div>
       </footer>

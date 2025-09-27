@@ -11,7 +11,7 @@ const Header = ({ user, onLogout, onHome }) => {
         >
           <Building className="w-8 h-8" />
           <div className="text-left">
-            <h1 className="text-xl font-bold">Citizen Portal</h1>
+            <h1 className="text-xl font-bold">Civic Connect</h1>
             <p className="text-xs text-blue-200">Government Services</p>
           </div>
         </button>
