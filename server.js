@@ -75,6 +75,19 @@ app.get("/api/get-citizen-complaints",requireAuth(),async (req,res)=>{
 
 })
 
+app.get("/api/get-admin-complaints",requireAuth(),async (req,res)=>{
+  try{
+    const {data,error} = await supabase.from("complaints").select("*").in("status",["open","in_progress"]).order("status",{ascending:false}).order("updated_at",{ascending:true})
+    if(error) throw error
+    res.status(200).json(data)  
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
+
+
+
 app.listen(PORT, () =>{
     console.log(`Server is running on port ${PORT}`);
 })
