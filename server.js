@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import { clerkMiddleware, requireAuth } from '@clerk/express'
 import { createClient } from '@supabase/supabase-js';
 import cors from "cors";
+import { data } from 'react-router';
 
 
 dotenv.config();
@@ -77,7 +78,7 @@ app.get("/api/get-citizen-complaints",requireAuth(),async (req,res)=>{
 
 app.get("/api/get-admin-complaints",requireAuth(),async (req,res)=>{
   try{
-    const {data,error} = await supabase.from("complaints").select("*").in("status",["open","in_progress"]).order("status",{ascending:false}).order("updated_at",{ascending:true})
+    const {data,error} = await supabase.from("complaints").select("*").in("status",["open","in_progress","reopened"]).order("status",{ascending:false}).order("updated_at",{ascending:true})
     if(error) throw error
     res.status(200).json(data)  
   }
@@ -85,6 +86,27 @@ app.get("/api/get-admin-complaints",requireAuth(),async (req,res)=>{
     res.status(500).json({error:error.message})
   }
 })
+
+app.patch("/api/update-complaint",requireAuth(),async (req,res)=>{
+  try{
+    const {id,assignee}=req.body;
+    const {data,error}=await supabase.from("complaints").update({
+      assigned_to : assignee,
+      status : "in_progress",
+      updated_at : new Date().toISOString()
+    }).eq("id",id).select("*")
+
+    if(error) throw error
+    res.status(200).json(data)
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
+
+// app.patch("/api/recheck-complaint",requireAuth(),async (req,res)=>{
+  
+// })
 
 
 
