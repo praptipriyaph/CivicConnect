@@ -45,12 +45,12 @@ app.post("/api/save-user",requireAuth(),async (req, res) => {
   }
 });
 
-app.post("/api/raise-issue",requireAuth(),async (req,res)=>{
+app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
   try{
     const clerk_id=req.auth.userId
     const creator=await supabase.from("users").select("id").eq("clerk_id",clerk_id).single();
     const {title,description,latitude,longitude,image} = req.body
-    const {data,error} = await supabase.from("issues").insert([{
+    const {data,error} = await supabase.from("complaints").insert([{
       title,description,latitude,longitude,image,created_by:creator.data.id
     }])
     if(error)throw error;
@@ -61,9 +61,19 @@ app.post("/api/raise-issue",requireAuth(),async (req,res)=>{
   }
 })
 
-// app.get("api/get-issues",async (req,res)=>{
+app.get("/api/get-citizen-complaints",requireAuth(),async (req,res)=>{
+  try{
+    const clerk_id=req.auth.userId
+    const creator=await supabase.from("users").select("id").eq("clerk_id",clerk_id).single();
+    const {data,error} = await supabase.from("complaints").select("*").eq("created_by",creator.data.id);
+    if(error)throw error
+    res.status(200).json(data)
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
 
-// })
+})
 
 app.listen(PORT, () =>{
     console.log(`Server is running on port ${PORT}`);
