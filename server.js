@@ -104,9 +104,7 @@ app.patch("/api/update-complaint",requireAuth(),async (req,res)=>{
   }
 })
 
-// app.patch("/api/recheck-complaint",requireAuth(),async (req,res)=>{
-  
-// })
+
 
 
 
