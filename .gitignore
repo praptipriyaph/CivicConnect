@@ -1,1 +1,13 @@
+
+# Node dependencies
+node_modules/
+
+# Python virtual environment
+.venv/
+
+# OS / IDE / misc
+__pycache__/
+*.pyc
 .env
+.DS_Store
+.vscode/
