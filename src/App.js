@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// Import routing components
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+
 import LandingPage from './pages/LandingPage';
 import LoginModal from './components/common/LoginModal';
 import Header from './components/common/Header';
@@ -6,109 +9,139 @@ import ComplaintForm from './components/citizen/ComplaintForm';
 import ComplaintTracking from './components/citizen/ComplaintTracking';
 import SimpleAdminDashboard from './components/admin/SimpleAdminDashboard';
 import GovPortal from './pages/GovPortal';
-import ProfileDropdown from './components/common/ProfileDropdown'; // Import ProfileDropdown
-import NotificationsPanel from './components/common/NotificationsPanel'; // Import NotificationsPanel
+import ProfileDropdown from './components/common/ProfileDropdown';
+import NotificationsPanel from './components/common/NotificationsPanel';
 import { mockComplaints } from './utils/mockData';
+// Import USER_ROLES if needed for checks
+import { USER_ROLES } from './utils/constants';
+
+// AdminLoginPage component remains the same...
+const AdminLoginPage = ({ onLogin }) => {
+  const navigate = useNavigate();
+  const handleAdminLogin = (userData) => {
+    onLogin(userData);
+    if (userData.role === USER_ROLES.ADMIN) {
+      navigate('/admin-dashboard');
+    } else if (userData.role === USER_ROLES.GOVERNMENT) {
+      navigate('/gov-portal');
+    } else {
+      navigate('/');
+    }
+  };
+  return (
+    <LoginModal
+      isOpen={true}
+      onClose={() => navigate('/')}
+      onLogin={handleAdminLogin}
+      purpose="admin-login"
+    />
+  );
+};
+
+// ProtectedRoute component remains the same...
+const ProtectedRoute = ({ user, allowedRoles, children }) => {
+  const location = useLocation();
+  if (!user) {
+    return <Navigate to="/" state={{ from: location }} replace />;
+  }
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+};
 
 
 const App = () => {
-  const [currentView, setCurrentView] = useState('landing');
   const [user, setUser] = useState(null);
   const [complaints, setComplaints] = useState(mockComplaints);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPurpose, setLoginPurpose] = useState('');
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false); // State for profile dropdown
-  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false); // State for notifications panel
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    setShowProfileDropdown(false);
+    setShowNotificationsPanel(false);
+  }, [location.pathname]);
 
   const promptLogin = (purpose) => {
     setLoginPurpose(purpose);
     setShowLoginModal(true);
-    // Close dropdowns when login is prompted
     setShowProfileDropdown(false);
     setShowNotificationsPanel(false);
   };
 
-  // Simplified navigation, login checks moved to specific handlers
-  const handleNavigate = (view) => {
-    // Special handling for admin-login routing if clicked from Landing Page
-     if (view === 'admin-login') {
-      if (!user) {
-        promptLogin(view);
-      } else {
-        if (user.role === 'Admin') setCurrentView('admin-dashboard');
-        else if (user.role === 'Government') setCurrentView('gov-portal');
-        else setCurrentView('landing'); // Fallback if logged in user isn't admin/gov
-      }
-    } else if (['complaint-form', 'track-complaint'].includes(view)) {
-       // Other views requiring login
-       if (!user) {
-         promptLogin(view);
-       } else {
-         setCurrentView(view);
-       }
-    } else {
-      // Public views
-      setCurrentView(view);
-    }
-     // Close dropdowns on any navigation
-    setShowProfileDropdown(false);
-    setShowNotificationsPanel(false);
-  };
-
-  const handleLogin = (userData) => {
+   const handleLogin = (userData) => {
     setUser(userData);
     setShowLoginModal(false);
 
-    // Redirect based on the original purpose
-    switch (loginPurpose) {
-      case 'complaint-form':
-        setCurrentView('complaint-form');
-        break;
-      case 'track-complaint':
-        setCurrentView('track-complaint');
-        break;
-      case 'admin-login':
-        if (userData.role === 'Admin') setCurrentView('admin-dashboard');
-        else if (userData.role === 'Government') setCurrentView('gov-portal');
-        else setCurrentView('landing');
-        break;
-      case 'profile': // If login was prompted by profile click, show dropdown after login
-         setShowProfileDropdown(true);
-         // Decide if we should also navigate somewhere, e.g., dashboard
-          if (userData.role === 'Admin') setCurrentView('admin-dashboard');
-          else if (userData.role === 'Government') setCurrentView('gov-portal');
-          else if (userData.role === 'Citizen') setCurrentView('track-complaint');
-          else setCurrentView('landing');
-         break;
-      case 'notifications': // If login was prompted by notification click, show panel after login
-         setShowNotificationsPanel(true);
-         // Decide if we should also navigate somewhere
-          if (userData.role === 'Admin') setCurrentView('admin-dashboard');
-          else if (userData.role === 'Government') setCurrentView('gov-portal');
-          else if (userData.role === 'Citizen') setCurrentView('track-complaint');
-          else setCurrentView('landing');
-         break;
-      default: // Default redirect after login via Login button
-        if (userData.role === 'Admin') setCurrentView('admin-dashboard');
-        else if (userData.role === 'Government') setCurrentView('gov-portal');
-        else if (userData.role === 'Citizen') setCurrentView('track-complaint');
-        else setCurrentView('landing');
+    // Check if loginPurpose is one of the target paths from landing page
+    if (loginPurpose === '/complaint-form' || loginPurpose === '/track-complaint') {
+        if (userData.role === USER_ROLES.CITIZEN) {
+            navigate(loginPurpose); // Navigate to the originally intended path
+        } else {
+            // Handle non-citizen login after trying to access citizen routes
+            if (userData.role === USER_ROLES.ADMIN) navigate('/admin-dashboard');
+            else if (userData.role === USER_ROLES.GOVERNMENT) navigate('/gov-portal');
+            else navigate('/');
+        }
     }
-    setLoginPurpose('');
+    // Handle login prompted by header buttons or direct login button
+    else if (loginPurpose === 'profile') {
+         setShowProfileDropdown(true);
+          if (userData.role === USER_ROLES.ADMIN) navigate('/admin-dashboard');
+          else if (userData.role === USER_ROLES.GOVERNMENT) navigate('/gov-portal');
+          // MODIFICATION: Citizen goes to landing after profile login trigger
+          else if (userData.role === USER_ROLES.CITIZEN) navigate('/');
+          else navigate('/');
+    } else if (loginPurpose === 'notifications') {
+         setShowNotificationsPanel(true);
+         if (userData.role === USER_ROLES.ADMIN) navigate('/admin-dashboard');
+         else if (userData.role === USER_ROLES.GOVERNMENT) navigate('/gov-portal');
+         // MODIFICATION: Citizen goes to landing after notification login trigger
+         else if (userData.role === USER_ROLES.CITIZEN) navigate('/');
+         else navigate('/');
+    }
+    // Default redirect after login via Login button or unknown purpose
+    else {
+        switch (userData.role) {
+            case USER_ROLES.ADMIN:
+              navigate('/admin-dashboard');
+              break;
+            case USER_ROLES.GOVERNMENT:
+              navigate('/gov-portal');
+              break;
+            case USER_ROLES.CITIZEN:
+              // ***MODIFICATION HERE***: Redirect citizen to landing page ('/')
+              // instead of '/track-complaint' for general login.
+              navigate('/');
+              break;
+            default:
+              navigate('/');
+          }
+    }
+    setLoginPurpose(''); // Clear purpose after handling
   };
 
   const handleLogout = () => {
     setUser(null);
-    setCurrentView('landing');
-    setShowProfileDropdown(false); // Close dropdown on logout
-    setShowNotificationsPanel(false); // Close panel on logout
+    setShowProfileDropdown(false);
+    setShowNotificationsPanel(false);
+    navigate('/');
   };
 
   const handleSubmitComplaint = (newComplaint) => {
-    setComplaints([...complaints, newComplaint]);
-    // Consider using a non-alert message system in a real app
-    alert('Complaint submitted successfully! Your complaint ID is: ' + newComplaint.id);
-    setCurrentView('track-complaint');
+    const complaintWithUser = {
+        ...newComplaint,
+        submittedById: user ? user.id : null,
+        submittedBy: user ? user.name : 'Anonymous'
+    };
+    setComplaints([...complaints, complaintWithUser]);
+    alert('Complaint submitted successfully! Your complaint ID is: ' + complaintWithUser.id);
+    navigate('/track-complaint');
   };
 
   const handleUpdateComplaint = (id, updates) => {
@@ -117,100 +150,101 @@ const App = () => {
     ));
   };
 
-  const handleHome = () => {
-    setCurrentView('landing');
-    setShowProfileDropdown(false); // Close dropdown
-    setShowNotificationsPanel(false); // Close panel
-  };
+  // Header Handlers
+  const handleLoginClick = () => promptLogin('login-button');
 
-  const handleLoginClick = () => {
-    promptLogin('login-button');
-  };
-
-  // Updated handler: Toggle panel or prompt login
   const handleNotificationClick = () => {
     if (!user) {
       promptLogin('notifications');
     } else {
-      setShowNotificationsPanel(prev => !prev); // Toggle visibility
-      setShowProfileDropdown(false); // Close profile if open
+      setShowNotificationsPanel(prev => !prev);
+      setShowProfileDropdown(false);
     }
   };
 
-  // Updated handler: Toggle dropdown or prompt login
   const handleProfileClick = () => {
     if (!user) {
       promptLogin('profile');
     } else {
-      setShowProfileDropdown(prev => !prev); // Toggle visibility
-      setShowNotificationsPanel(false); // Close notifications if open
+      setShowProfileDropdown(prev => !prev);
+      setShowNotificationsPanel(false);
     }
   };
 
-  // Close dropdown/panel if clicking outside
-  // Note: This is a basic implementation. More robust solutions might use refs or libraries.
+  const handleLandingNavigation = (targetPath) => {
+    if (!user) {
+      promptLogin(targetPath);
+    } else {
+      if (user.role === USER_ROLES.CITIZEN) {
+        navigate(targetPath);
+      } else {
+        alert("This action is only available for citizens.");
+      }
+    }
+  };
+
   const handleOutsideClick = (e) => {
-    // Add checks here if needed to prevent closing when clicking inside the dropdown/panel itself
-    // For simplicity, this example closes them on any click in the main content area
-    if (showProfileDropdown || showNotificationsPanel) {
-        // A more robust check would involve checking if e.target is outside the dropdown/panel elements
-        setShowProfileDropdown(false);
-        setShowNotificationsPanel(false);
-    }
-  };
-
-
-  // Header is now always rendered at the top
-  // const showHeader = currentView !== 'landing'; // Or always show header: const showHeader = true;
-  const showHeader = true; // Always show the main header
-
-
-  const renderCurrentView = () => {
-    switch (currentView) {
-      case 'landing':
-        // Pass handleNavigate down, LandingPage no longer needs its own header controls
-        return <LandingPage onNavigate={handleNavigate} />;
-      case 'complaint-form':
-        return <ComplaintForm onSubmit={handleSubmitComplaint} />;
-      case 'track-complaint':
-        return <ComplaintTracking complaints={complaints} />;
-      case 'admin-dashboard':
-        return <SimpleAdminDashboard complaints={complaints} />;
-      case 'gov-portal':
-        return <GovPortal complaints={complaints} onUpdateComplaint={handleUpdateComplaint} />;
-      // Removed profile and notifications cases
-      default:
-        return <LandingPage onNavigate={handleNavigate} />;
-    }
+    // Basic implementation - needs refinement with refs to avoid unwanted closing
   };
 
   return (
-    <div className="relative min-h-screen"> {/* Ensure relative positioning for dropdowns */}
-      {showHeader && (
-        <Header
-          user={user}
-          onLogout={handleLogout}
-          onHome={handleHome}
-          onLoginClick={handleLoginClick}
-          onNotificationClick={handleNotificationClick} // Pass toggle function
-          onProfileClick={handleProfileClick}       // Pass toggle function
-        />
-      )}
+    <div className="relative min-h-screen">
+      <Header
+        user={user}
+        onLogout={handleLogout}
+        onLoginClick={handleLoginClick}
+        onNotificationClick={handleNotificationClick}
+        onProfileClick={handleProfileClick}
+      />
 
-      {/* Conditionally render dropdowns/panels */}
       {showProfileDropdown && <ProfileDropdown user={user} onClose={() => setShowProfileDropdown(false)} />}
       {showNotificationsPanel && <NotificationsPanel onClose={() => setShowNotificationsPanel(false)} />}
 
-
-      {/* Main content area */}
-      {/* Added onClick handler to close dropdowns when clicking main content */}
       <main className="pt-4 px-4 sm:px-6 lg:px-8" onClick={handleOutsideClick}>
-         {renderCurrentView()}
+        <Routes>
+          <Route path="/" element={<LandingPage onNavigate={handleLandingNavigation} />} />
+          <Route path="/admin-login" element={<AdminLoginPage onLogin={handleLogin} />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/complaint-form"
+            element={
+              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.CITIZEN]}>
+                <ComplaintForm onSubmit={handleSubmitComplaint} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/track-complaint"
+            element={
+              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.CITIZEN]}>
+                 <ComplaintTracking complaints={complaints.filter(c => user ? c.submittedById === user.id : c.submittedBy === 'Current User')} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.ADMIN]}>
+                <SimpleAdminDashboard complaints={complaints} onUpdateComplaint={handleUpdateComplaint}/>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/gov-portal"
+            element={
+              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.GOVERNMENT]}>
+                <GovPortal complaints={complaints} onUpdateComplaint={handleUpdateComplaint} />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
-      {/* Login Modal */}
       <LoginModal
-        isOpen={showLoginModal}
+        isOpen={showLoginModal && location.pathname !== '/admin-login'}
         onClose={() => setShowLoginModal(false)}
         onLogin={handleLogin}
         purpose={loginPurpose}

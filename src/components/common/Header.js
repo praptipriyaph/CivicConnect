@@ -1,14 +1,16 @@
 import React from 'react';
+// Import Link for routing
+import { Link } from 'react-router-dom';
 import { Building, User, Bell, LogIn, LogOut } from 'lucide-react';
 
-// Props onNotificationClick and onProfileClick now toggle visibility directly
-const Header = ({ user, onLogout, onHome, onLoginClick, onNotificationClick, onProfileClick }) => {
+// Removed onHome prop
+const Header = ({ user, onLogout, onLoginClick, onNotificationClick, onProfileClick }) => {
   return (
     <header className="bg-blue-600 text-white p-4 shadow-lg sticky top-0 z-40"> {/* Added sticky positioning */}
       <div className="max-w-7xl mx-auto flex justify-between items-center">
-        {/* Left Side: Logo and Title */}
-        <button
-          onClick={onHome}
+        {/* Left Side: Logo and Title - Use Link */}
+        <Link
+          to="/" // Link to the home page route
           className="flex items-center space-x-2 hover:bg-blue-700 px-3 py-2 rounded-md transition-colors"
         >
           <Building className="w-8 h-8" />
@@ -16,7 +18,7 @@ const Header = ({ user, onLogout, onHome, onLoginClick, onNotificationClick, onP
             <h1 className="text-xl font-bold">Civic Connect</h1>
             <p className="text-xs text-blue-200">Government Services</p>
           </div>
-        </button>
+        </Link>
 
         {/* Right Side: Icons and User Info/Actions */}
         <div className="flex items-center space-x-4">

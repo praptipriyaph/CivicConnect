@@ -1,21 +1,19 @@
 import React from 'react';
-import { 
-  Building, 
-  Plus, 
-  Search, 
-  FileText, 
-  Eye, 
-  BarChart, 
-  ArrowRight,
+// Removed Link import as buttons now trigger a function prop
+import {
+  Building,
+  Plus,
+  Search,
+
   Phone,
   Mail,
   MapPin as MapPinIcon
 } from 'lucide-react';
 
+// Added onNavigate prop back
 const LandingPage = ({ onNavigate }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      
 
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
@@ -26,19 +24,21 @@ const LandingPage = ({ onNavigate }) => {
               <span className="text-blue-600"> Our Action</span>
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
-              Report civic issues, track progress, and help build a better community. 
+              Report civic issues, track progress, and help build a better community.
               Your complaints reach the right authorities instantly.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              {/* Changed back to button, using onNavigate */}
               <button
-                onClick={() => onNavigate('complaint-form')}
+                onClick={() => onNavigate('/complaint-form')} // Pass target path
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 transition-all transform hover:scale-105"
               >
                 <Plus className="w-5 h-5" />
                 <span>Report an Issue</span>
               </button>
+              {/* Changed back to button, using onNavigate */}
               <button
-                onClick={() => onNavigate('track-complaint')}
+                onClick={() => onNavigate('/track-complaint')} // Pass target path
                 className="bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 transition-all transform hover:scale-105"
               >
                 <Search className="w-5 h-5" />
@@ -46,9 +46,6 @@ const LandingPage = ({ onNavigate }) => {
               </button>
             </div>
           </div>
-
-
-
 
           {/* Statistics */}
           <div className="bg-white rounded-xl p-8 shadow-lg">
@@ -91,17 +88,19 @@ const LandingPage = ({ onNavigate }) => {
                 Connecting citizens with their government for better community services.
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><button onClick={() => onNavigate('complaint-form')} className="hover:text-white">Report Issue</button></li>
-                <li><button onClick={() => onNavigate('track-complaint')} className="hover:text-white">Track Status</button></li>
-                <li><button className="hover:text-white">FAQ</button></li>
-                <li><button className="hover:text-white">Guidelines</button></li>
+                 {/* Changed back to buttons using onNavigate */}
+                <li><button onClick={() => onNavigate('/complaint-form')} className="hover:text-white text-left">Report Issue</button></li>
+                <li><button onClick={() => onNavigate('/track-complaint')} className="hover:text-white text-left">Track Status</button></li>
+                <li><button className="hover:text-white text-left">FAQ</button></li> {/* Assuming not a route */}
+                <li><button className="hover:text-white text-left">Guidelines</button></li> {/* Assuming not a route */}
+                {/* Ensure no admin login button/link here */}
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Categories</h4>
               <ul className="space-y-2 text-gray-400">
@@ -111,7 +110,7 @@ const LandingPage = ({ onNavigate }) => {
                 <li>Public Safety</li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Contact</h4>
               <div className="space-y-2 text-gray-400">
@@ -130,7 +129,7 @@ const LandingPage = ({ onNavigate }) => {
               </div>
             </div>
           </div>
-          
+
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             <p>&copy; 2024 Civic Connect. All rights reserved. | Privacy Policy | Terms of Service</p>
           </div>
