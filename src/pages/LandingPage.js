@@ -15,32 +15,7 @@ import {
 const LandingPage = ({ onNavigate }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <Building className="w-8 h-8 text-blue-600" />
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">Civic Connect</h1>
-                <p className="text-sm text-gray-600">Government Services</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-6">
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                <div className="flex items-center space-x-1">
-                  <Phone className="w-4 h-4" />
-                  <span>1800-123-4567</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <Mail className="w-4 h-4" />
-                  <span>help@citizenportal.gov</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      
 
       {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
@@ -72,59 +47,8 @@ const LandingPage = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Service Cards */}
-          <div className="grid md:grid-cols-3 gap-8 mb-16">
-            <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                <FileText className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-4">Report Issues</h3>
-              <p className="text-gray-600 mb-6">
-                Submit complaints about roads, sanitation, utilities, and public services with photo evidence.
-              </p>
-              <button
-                onClick={() => onNavigate('complaint-form')}
-                className="text-blue-600 font-semibold flex items-center space-x-2 hover:text-blue-700"
-              >
-                <span>Get Started</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                <Eye className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-4">Track Progress</h3>
-              <p className="text-gray-600 mb-6">
-                Monitor the status of your complaints in real-time and receive updates on resolution.
-              </p>
-              <button
-                onClick={() => onNavigate('track-complaint')}
-                className="text-green-600 font-semibold flex items-center space-x-2 hover:text-green-700"
-              >
-                <span>Track Now</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
 
-            <div className="bg-white rounded-xl p-8 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                <BarChart className="w-8 h-8 text-purple-600" />
-              </div>
-              <h3 className="text-xl font-semibold mb-4">Official Access</h3>
-              <p className="text-gray-600 mb-6">
-                Government officials and administrators can manage and respond to citizen complaints.
-              </p>
-              <button
-                onClick={() => onNavigate('admin-login')}
-                className="text-purple-600 font-semibold flex items-center space-x-2 hover:text-purple-700"
-              >
-                <span>Login</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
 
           {/* Statistics */}
           <div className="bg-white rounded-xl p-8 shadow-lg">
