@@ -1,32 +1,30 @@
 import React, { useState, useEffect } from 'react';
-// Import routing components
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 
+// Page imports
 import LandingPage from './pages/LandingPage';
+import AdminPortal from './pages/AdminPortal';
+import GovPortal from './pages/GovPortal';
+
+// Component imports
 import LoginModal from './components/common/LoginModal';
 import Header from './components/common/Header';
 import ComplaintForm from './components/citizen/ComplaintForm';
 import ComplaintTracking from './components/citizen/ComplaintTracking';
-import SimpleAdminDashboard from './components/admin/SimpleAdminDashboard';
-import GovPortal from './pages/GovPortal';
 import ProfileDropdown from './components/common/ProfileDropdown';
 import NotificationsPanel from './components/common/NotificationsPanel';
-import { mockComplaints } from './utils/mockData';
-// Import USER_ROLES if needed for checks
-import { USER_ROLES } from './utils/constants';
 
-// AdminLoginPage component remains the same...
+// Data and constants
+import { mockComplaints as initialMockComplaints } from './utils/mockData';
+import { USER_ROLES, COMPLAINT_STATUS } from './utils/constants';
+
+// ---- Helper Components ----
+
+// AdminLoginPage component
 const AdminLoginPage = ({ onLogin }) => {
   const navigate = useNavigate();
   const handleAdminLogin = (userData) => {
-    onLogin(userData);
-    if (userData.role === USER_ROLES.ADMIN) {
-      navigate('/admin-dashboard');
-    } else if (userData.role === USER_ROLES.GOVERNMENT) {
-      navigate('/gov-portal');
-    } else {
-      navigate('/');
-    }
+    onLogin(userData); // Use the main login handler
   };
   return (
     <LoginModal
@@ -38,7 +36,7 @@ const AdminLoginPage = ({ onLogin }) => {
   );
 };
 
-// ProtectedRoute component remains the same...
+// ProtectedRoute component
 const ProtectedRoute = ({ user, allowedRoles, children }) => {
   const location = useLocation();
   if (!user) {
@@ -50,10 +48,11 @@ const ProtectedRoute = ({ user, allowedRoles, children }) => {
   return children;
 };
 
+// ---- Main App Component ----
 
 const App = () => {
   const [user, setUser] = useState(null);
-  const [complaints, setComplaints] = useState(mockComplaints);
+  const [complaints, setComplaints] = useState(initialMockComplaints);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPurpose, setLoginPurpose] = useState('');
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -78,53 +77,35 @@ const App = () => {
     setUser(userData);
     setShowLoginModal(false);
 
-    // Check if loginPurpose is one of the target paths from landing page
+    const origin = location.state?.from?.pathname;
+    let redirectTo = '/';
+
     if (loginPurpose === '/complaint-form' || loginPurpose === '/track-complaint') {
-        if (userData.role === USER_ROLES.CITIZEN) {
-            navigate(loginPurpose); // Navigate to the originally intended path
-        } else {
-            // Handle non-citizen login after trying to access citizen routes
-            if (userData.role === USER_ROLES.ADMIN) navigate('/admin-dashboard');
-            else if (userData.role === USER_ROLES.GOVERNMENT) navigate('/gov-portal');
-            else navigate('/');
+        redirectTo = (userData.role === USER_ROLES.CITIZEN) ? loginPurpose :
+                     (userData.role === USER_ROLES.ADMIN) ? '/admin-dashboard' :
+                     (userData.role === USER_ROLES.GOVERNMENT) ? '/gov-portal' : '/';
+    } else if (origin && origin !== '/') {
+         if (origin === '/admin-dashboard' && userData.role !== USER_ROLES.ADMIN) redirectTo = '/';
+         else if (origin === '/gov-portal' && userData.role !== USER_ROLES.GOVERNMENT) redirectTo = '/';
+         else if ((origin === '/complaint-form' || origin === '/track-complaint') && userData.role !== USER_ROLES.CITIZEN) redirectTo = '/';
+         else redirectTo = origin;
+    } else {
+        switch (userData.role) {
+            case USER_ROLES.ADMIN:      redirectTo = '/admin-dashboard'; break;
+            case USER_ROLES.GOVERNMENT: redirectTo = '/gov-portal'; break;
+            case USER_ROLES.CITIZEN:    redirectTo = '/'; break;
+            // ***ADDED DEFAULT CASE***
+            default:                    redirectTo = '/'; break; // Default redirect for safety
         }
     }
-    // Handle login prompted by header buttons or direct login button
-    else if (loginPurpose === 'profile') {
-         setShowProfileDropdown(true);
-          if (userData.role === USER_ROLES.ADMIN) navigate('/admin-dashboard');
-          else if (userData.role === USER_ROLES.GOVERNMENT) navigate('/gov-portal');
-          // MODIFICATION: Citizen goes to landing after profile login trigger
-          else if (userData.role === USER_ROLES.CITIZEN) navigate('/');
-          else navigate('/');
-    } else if (loginPurpose === 'notifications') {
-         setShowNotificationsPanel(true);
-         if (userData.role === USER_ROLES.ADMIN) navigate('/admin-dashboard');
-         else if (userData.role === USER_ROLES.GOVERNMENT) navigate('/gov-portal');
-         // MODIFICATION: Citizen goes to landing after notification login trigger
-         else if (userData.role === USER_ROLES.CITIZEN) navigate('/');
-         else navigate('/');
-    }
-    // Default redirect after login via Login button or unknown purpose
-    else {
-        switch (userData.role) {
-            case USER_ROLES.ADMIN:
-              navigate('/admin-dashboard');
-              break;
-            case USER_ROLES.GOVERNMENT:
-              navigate('/gov-portal');
-              break;
-            case USER_ROLES.CITIZEN:
-              // ***MODIFICATION HERE***: Redirect citizen to landing page ('/')
-              // instead of '/track-complaint' for general login.
-              navigate('/');
-              break;
-            default:
-              navigate('/');
-          }
-    }
-    setLoginPurpose(''); // Clear purpose after handling
+
+    if (loginPurpose === 'profile' && redirectTo !== '/') setShowProfileDropdown(true);
+    if (loginPurpose === 'notifications' && redirectTo !== '/') setShowNotificationsPanel(true);
+
+    setLoginPurpose('');
+    navigate(redirectTo, { replace: true });
   };
+
 
   const handleLogout = () => {
     setUser(null);
@@ -133,24 +114,37 @@ const App = () => {
     navigate('/');
   };
 
-  const handleSubmitComplaint = (newComplaint) => {
-    const complaintWithUser = {
-        ...newComplaint,
+  const handleSubmitComplaint = (newComplaintData) => {
+    const complaintToAdd = {
+        ...newComplaintData,
+        id: Date.now(),
+        status: COMPLAINT_STATUS.LODGED,
+        submittedDate: new Date().toISOString().split('T')[0],
+        lastUpdated: new Date().toISOString().split('T')[0],
         submittedById: user ? user.id : null,
-        submittedBy: user ? user.name : 'Anonymous'
+        submittedBy: user ? user.name : 'Anonymous',
+        assignedByAdmin: null,
+        assignedToDept: null,
+        actionOfficer: null,
+        resolutionDetails: null,
+        rating: null,
     };
-    setComplaints([...complaints, complaintWithUser]);
-    alert('Complaint submitted successfully! Your complaint ID is: ' + complaintWithUser.id);
+    setComplaints(prevComplaints => [...prevComplaints, complaintToAdd]);
+    alert('Grievance submitted successfully! Your Grievance ID is: #' + complaintToAdd.id);
     navigate('/track-complaint');
   };
 
   const handleUpdateComplaint = (id, updates) => {
-    setComplaints(complaints.map(complaint =>
-      complaint.id === id ? { ...complaint, ...updates } : complaint
-    ));
+     console.log("App.js: Updating complaint:", id, "with", updates);
+    setComplaints(prevComplaints =>
+        prevComplaints.map(complaint =>
+            complaint.id === id
+            ? { ...complaint, ...updates, lastUpdated: new Date().toISOString().split('T')[0] }
+            : complaint
+        )
+    );
   };
 
-  // Header Handlers
   const handleLoginClick = () => promptLogin('login-button');
 
   const handleNotificationClick = () => {
@@ -175,16 +169,18 @@ const App = () => {
     if (!user) {
       promptLogin(targetPath);
     } else {
-      if (user.role === USER_ROLES.CITIZEN) {
+      if (user.role === USER_ROLES.CITIZEN && (targetPath === '/complaint-form' || targetPath === '/track-complaint')) {
         navigate(targetPath);
+      } else if (user.role !== USER_ROLES.CITIZEN && (targetPath === '/complaint-form' || targetPath === '/track-complaint')) {
+         alert("This action is only available for citizens.");
       } else {
-        alert("This action is only available for citizens.");
+         navigate(targetPath);
       }
     }
   };
 
   const handleOutsideClick = (e) => {
-    // Basic implementation - needs refinement with refs to avoid unwanted closing
+    // Basic implementation - needs refinement with refs
   };
 
   return (
@@ -218,7 +214,10 @@ const App = () => {
             path="/track-complaint"
             element={
               <ProtectedRoute user={user} allowedRoles={[USER_ROLES.CITIZEN]}>
-                 <ComplaintTracking complaints={complaints.filter(c => user ? c.submittedById === user.id : c.submittedBy === 'Current User')} />
+                 <ComplaintTracking
+                    complaints={complaints.filter(c => user && c.submittedById === user.id)}
+                    // onUpdateComplaint={handleUpdateComplaint} // Pass if needed for appeal/rating updates
+                 />
               </ProtectedRoute>
             }
           />
@@ -226,7 +225,11 @@ const App = () => {
             path="/admin-dashboard"
             element={
               <ProtectedRoute user={user} allowedRoles={[USER_ROLES.ADMIN]}>
-                <SimpleAdminDashboard complaints={complaints} onUpdateComplaint={handleUpdateComplaint}/>
+                <AdminPortal
+                    complaints={complaints}
+                    onUpdateComplaint={handleUpdateComplaint}
+                    user={user}
+                />
               </ProtectedRoute>
             }
           />
@@ -234,7 +237,11 @@ const App = () => {
             path="/gov-portal"
             element={
               <ProtectedRoute user={user} allowedRoles={[USER_ROLES.GOVERNMENT]}>
-                <GovPortal complaints={complaints} onUpdateComplaint={handleUpdateComplaint} />
+                <GovPortal
+                    complaints={complaints}
+                    onUpdateComplaint={handleUpdateComplaint}
+                    user={user}
+                />
               </ProtectedRoute>
             }
           />
