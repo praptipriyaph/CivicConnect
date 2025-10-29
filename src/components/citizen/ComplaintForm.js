@@ -2,34 +2,48 @@ import React, { useState } from 'react';
 import { MapPin, Camera, Send } from 'lucide-react';
 import { categories } from '../../utils/mockData';
 
+// <-- NEW: Import the map picker
+import LocationPicker from '../common/LocationPicker';
+// <-- NEW: Import Leaflet's CSS
+import 'leaflet/dist/leaflet.css';
+
+// <-- NEW: Define initial state outside for easy reset
+const initialState = {
+  title: '',
+  category: '',
+  description: '',
+  location: '', // For the text address
+  location_latitude: null, // For the map
+  location_longitude: null, // For the map
+  priority: 'Medium',
+  evidence: null
+};
+
 const ComplaintForm = ({ onSubmit }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    category: '',
-    description: '',
-    location: '',
-    priority: 'Medium',
-    evidence: null
-  });
+  // <-- NEW: Use the initial state
+  const [formData, setFormData] = useState(initialState);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const newComplaint = {
-      ...formData,
+      ...formData, // This now includes lat/lng
       id: Date.now(),
       status: 'Pending',
       submittedDate: new Date().toISOString().split('T')[0],
-      submittedBy: 'Current User'
+      submittedBy: 'Current User' 
     };
     onSubmit(newComplaint);
-    setFormData({
-      title: '',
-      category: '',
-      description: '',
-      location: '',
-      priority: 'Medium',
-      evidence: null
-    });
+    // <-- NEW: Reset to the initial state
+    setFormData(initialState);
+  };
+
+  // <-- NEW: Handler to get data from the map component
+  const handleLocationSelect = (latlng) => {
+    setFormData(prevData => ({
+      ...prevData,
+      location_latitude: latlng.lat,
+      location_longitude: latlng.lng
+    }));
   };
 
   return (
@@ -64,8 +78,9 @@ const ComplaintForm = ({ onSubmit }) => {
           </select>
         </div>
 
+        {/* This is your existing text location field */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location Details *</label>
           <div className="relative">
             <input
               type="text"
@@ -73,10 +88,25 @@ const ComplaintForm = ({ onSubmit }) => {
               value={formData.location}
               onChange={(e) => setFormData({...formData, location: e.target.value})}
               className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent pr-10"
-              placeholder="Enter location details"
+              placeholder="e.g., Near BITS Pilani main gate"
             />
             <MapPin className="absolute right-3 top-3 w-5 h-5 text-gray-400" />
           </div>
+        </div>
+
+        {/* <-- NEW: Add the map picker component here --> */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Pin Location on Map
+          </label>
+          <LocationPicker onLocationSelect={handleLocationSelect} />
+          {/* (Optional) Display selected coordinates to the user */}
+          {formData.location_latitude && (
+            <p className="text-sm text-gray-600 mt-2">
+              Selected: Lat: {formData.location_latitude.toFixed(6)}, 
+              Lng: {formData.location_longitude.toFixed(6)}
+            </p>
+          )}
         </div>
 
         <div>
