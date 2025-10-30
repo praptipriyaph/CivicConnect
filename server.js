@@ -167,6 +167,36 @@ app.post("/api/admin-close-complaint",requireAuth(),async (req,res)=>{
 })
 
 
+app.get("/api/get-govt-officials",requireAuth(),async (req,res)=>{
+  try{
+    const {data,error} = await supabase.from("users").select("*").eq("role","citizen")
+    res.status(200).json(data)
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
+
+app.get("/api/get-govt-complaints",requireAuth(),async (req,res)=>{
+  try{
+    const {data,error} = await supabase.from("complaints").select("*").eq("status","assigned")
+    res.status(200).json(data)
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
+
+app.post("/api/govt-update-complaint",requireAuth(),async (req,res)=>{
+  try{
+
+  }
+  catch(error){
+
+  }
+})
+
+
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
