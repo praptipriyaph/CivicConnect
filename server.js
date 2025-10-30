@@ -45,6 +45,7 @@ app.post("/api/save-user",requireAuth(),async (req, res) => {
   }
 });
 
+
 app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
   try{
     const clerk_id=req.auth.userId
@@ -61,6 +62,7 @@ app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
   }
 })
 
+
 app.get("/api/get-citizen-complaints",requireAuth(),async (req,res)=>{
   try{
     const clerk_id=req.auth.userId
@@ -74,6 +76,7 @@ app.get("/api/get-citizen-complaints",requireAuth(),async (req,res)=>{
   }
 
 })
+
 
 app.get("/api/get-admin-complaints",requireAuth(),async (req,res)=>{
   try{
@@ -105,6 +108,7 @@ app.patch("/api/admin-update-complaint",requireAuth(),async (req,res)=>{
   }
 })
 
+
 app.post("/api/citizen-recheck-complaint",requireAuth(),async (req,res)=>{
   try{
     const {complaint_id,description}=req.body
@@ -125,9 +129,10 @@ app.post("/api/citizen-recheck-complaint",requireAuth(),async (req,res)=>{
   }
 })
 
-app.post("/api/citizen-close-complaint",requireAuth(),async (req,res)=>{
+//used by both admin and citizen
+app.post("/api/close-complaint",requireAuth(),async (req,res)=>{
   try{
-    const {complaint_id,description}=req.body
+    const {role,complaint_id,description}=req.body
     await supabase.from("complaints").update({
       status: "closed"
   }).eq("complaint_id",complaint_id)
@@ -138,28 +143,7 @@ app.post("/api/citizen-close-complaint",requireAuth(),async (req,res)=>{
         complaint_id:complaint_id
       }
     ])
-    res.status(200).json({role:"citizen",message:"Success!"})
-  }
-  catch(error){
-    res.status(500).json({error:error.message})
-  }
-})
-
-
-app.post("/api/admin-close-complaint",requireAuth(),async (req,res)=>{
-  try{
-    const {complaint_id,description}=req.body
-    await supabase.from("complaints").update({
-      status: "closed"
-  }).eq("complaint_id",complaint_id)
-    
-    await supabase.from("complaint_updates").insert([
-      {
-        description:description,
-        complaint_id:complaint_id
-      }
-    ])
-    res.status(200).json({role:"admin",message:"Success!"})
+    res.status(200).json({role:role,message:"Success!"})
   }
   catch(error){
     res.status(500).json({error:error.message})
@@ -189,10 +173,32 @@ app.get("/api/get-govt-complaints",requireAuth(),async (req,res)=>{
 
 app.post("/api/govt-update-complaint",requireAuth(),async (req,res)=>{
   try{
+    const {complaint_id,description} = req.body
+    const {data,error} = await supabase.from("complaints").update({
+      "status" : "in_progress",
+    }).eq("complaint_id",complaint_id)
 
+    await supabase.from("complaint_updates").insert([
+      {
+        complaint_id : complaint_id,
+        description : description
+      }
+    ])
+    res.status(200).json(data)
   }
   catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
 
+app.post("/api/get-complaint-updates",requireAuth(),async (req,res)=>{
+  try{
+    const {complaint_id} = req.body
+    const {data,error} = await supabase.from("updates").select("*").eq("complaint_id",complaint_id)
+    res.status(200).json(data)
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
   }
 })
 
