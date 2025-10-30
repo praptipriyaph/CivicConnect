@@ -3,7 +3,6 @@ import dotenv from 'dotenv';
 import { clerkMiddleware, requireAuth } from '@clerk/express'
 import { createClient } from '@supabase/supabase-js';
 import cors from "cors";
-import { data } from 'react-router';
 
 
 dotenv.config();
@@ -50,9 +49,9 @@ app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
   try{
     const clerk_id=req.auth.userId
     const creator=await supabase.from("users").select("id").eq("clerk_id",clerk_id).single();
-    const {title,description,latitude,longitude,image} = req.body
+    const {title,description,latitude,longitude,image,tag} = req.body
     const {data,error} = await supabase.from("complaints").insert([{
-      title,description,latitude,longitude,image,created_by:creator.data.id
+      title,description,latitude,longitude,image,created_by:creator.data.id,tag
     }])
     if(error)throw error;
     res.status(201).json(data)
@@ -87,12 +86,14 @@ app.get("/api/get-admin-complaints",requireAuth(),async (req,res)=>{
   }
 })
 
-app.patch("/api/update-complaint",requireAuth(),async (req,res)=>{
+
+//for both open->assigned and reopened->assigned 
+app.patch("/api/admin-update-complaint",requireAuth(),async (req,res)=>{
   try{
     const {id,assignee}=req.body;
     const {data,error}=await supabase.from("complaints").update({
       assigned_to : assignee,
-      status : "in_progress",
+      status : "assigned",
       updated_at : new Date().toISOString()
     }).eq("id",id).select("*")
 
@@ -104,7 +105,66 @@ app.patch("/api/update-complaint",requireAuth(),async (req,res)=>{
   }
 })
 
+app.post("/api/citizen-recheck-complaint",requireAuth(),async (req,res)=>{
+  try{
+    const {complaint_id,description}=req.body
+    await supabase.from("complaints").update({
+      status: "reopened"
+  }).eq("complaint_id",complaint_id)
+    
+    await supabase.from("complaint_updates").insert([
+      {
+        description:description,
+        complaint_id:complaint_id
+      }
+    ])
+    res.status(200).json({message:"Success!"})
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
 
+app.post("/api/citizen-close-complaint",requireAuth(),async (req,res)=>{
+  try{
+    const {complaint_id,description}=req.body
+    await supabase.from("complaints").update({
+      status: "closed"
+  }).eq("complaint_id",complaint_id)
+    
+    await supabase.from("complaint_updates").insert([
+      {
+        description:description,
+        complaint_id:complaint_id
+      }
+    ])
+    res.status(200).json({role:"citizen",message:"Success!"})
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
+
+
+app.post("/api/admin-close-complaint",requireAuth(),async (req,res)=>{
+  try{
+    const {complaint_id,description}=req.body
+    await supabase.from("complaints").update({
+      status: "closed"
+  }).eq("complaint_id",complaint_id)
+    
+    await supabase.from("complaint_updates").insert([
+      {
+        description:description,
+        complaint_id:complaint_id
+      }
+    ])
+    res.status(200).json({role:"admin",message:"Success!"})
+  }
+  catch(error){
+    res.status(500).json({error:error.message})
+  }
+})
 
 
 app.use((req, res) => {
