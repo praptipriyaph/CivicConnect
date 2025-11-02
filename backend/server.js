@@ -57,13 +57,16 @@ app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
     const {user_id,username,title,description,latitude,longitude,image,tag} = req.body
     const {data,error} = await supabase.from("complaints").insert([{
       title,description,latitude,longitude,image,created_by:user_id,tag
-    }])
+    }]).select("*").single()
     
-    await supabase.from("complaint_updates").insert([
+    if(error)throw error;
+
+    const {error:update_error} = await supabase.from("complaint_updates").insert([
       {description,complaint_id:data.complaint_id,updated_by:username}
     ])
 
-    if(error)throw error;
+    if(update_error) throw update_error;
+    
     res.status(201).json(data)
   }
   catch(error){
@@ -110,14 +113,16 @@ app.patch("/api/admin-update-complaint",requireAuth(),async (req,res)=>{
       status : "assigned",
     }).eq("complaint_id",complaint_id).select("*")
 
-    await supabase.from("complaint_updates").insert([{
+    if(error) throw error
+
+    const {error:update_error} = await supabase.from("complaint_updates").insert([{
       updated_by : username,
       complaint_id : complaint_id,
       description : description
     }
     ])
 
-    if(error) throw error
+    if(update_error) throw update_error;
     res.status(200).json(data)
 
   }
@@ -132,17 +137,22 @@ app.patch("/api/citizen-recheck-complaint",requireAuth(),async (req,res)=>{
     const {userId:clerk_id} = getAuth(req)
     const {username} = await clerkClient.users.getUser(clerk_id);
     const {complaint_id,description}=req.body
-    await supabase.from("complaints").update({
+    const {error} = await supabase.from("complaints").update({
       status: "reopened"
   }).eq("complaint_id",complaint_id)
     
-    await supabase.from("complaint_updates").insert([
+  if(error) throw error;
+
+  const {error:update_error} = await supabase.from("complaint_updates").insert([
       {
         description:description,
         complaint_id:complaint_id,
         updated_by : username
       }
     ])
+
+    if(update_error) throw update_error;
+
     res.status(200).json({message:"Success!"})
   }
   catch(error){
@@ -156,17 +166,22 @@ app.post("/api/close-complaint",requireAuth(),async (req,res)=>{
     const {userId:clerk_id} = getAuth(req)
     const {username} = await clerkClient.users.getUser(clerk_id);
     const {role,complaint_id,description}=req.body
-    await supabase.from("complaints").update({
+    const {error} = await supabase.from("complaints").update({
       status: "closed"
   }).eq("complaint_id",complaint_id)
     
-    await supabase.from("complaint_updates").insert([
+  if(error) throw error
+
+  const {error:update_error} =  await supabase.from("complaint_updates").insert([
       {
         description:description,
         complaint_id:complaint_id,
-        username : username
+        updated_by : username
       }
     ])
+
+    if(update_error) throw update_error
+
     res.status(200).json({role:role,message:"Success!"})
   }
   catch(error){
@@ -178,7 +193,7 @@ app.post("/api/close-complaint",requireAuth(),async (req,res)=>{
 app.post("/api/get-govt-officials",requireAuth(),async (req,res)=>{
   try{
     const {tag} = req.body
-    const {data:department} = await supabase.from("departments").select("department_id").eq("name",tag)
+    const {data:department} = await supabase.from("departments").select("department_id").eq("name",tag).single()
     const {data,error} = await supabase.from("users").select("*").eq("role","official").eq("department_id",department.department_id)
     if(error) throw error
     res.status(200).json(data)
@@ -211,15 +226,17 @@ app.patch("/api/govt-update-complaint",requireAuth(),async (req,res)=>{
       "status" : "in_progress",
     }).eq("complaint_id",complaint_id)
 
-    await supabase.from("complaint_updates").insert([
+    if(error) throw error
+
+    const {error : update_error} = await supabase.from("complaint_updates").insert([
       {
         complaint_id : complaint_id,
         description : description,
-        username : username
+        updated_by : username
       }
     ])
 
-    if(error) throw error
+    if(update_error) throw update_error
 
     res.status(200).json(data)
 
