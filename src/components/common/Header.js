@@ -1,4 +1,5 @@
 import React from 'react';
+<<<<<<< HEAD
 import { Link } from 'react-router-dom';
 import { Building, User, LogIn, LogOut, Home } from 'lucide-react';
 
@@ -9,6 +10,20 @@ const Header = ({ user, onLogout, onLoginClick, onProfileClick }) => {
         {/* Left Side: Logo and Title */}
         <Link
           to="/"
+=======
+// Import Link for routing
+import { Link } from 'react-router-dom';
+import { Building, User, Bell, LogIn, LogOut } from 'lucide-react';
+
+// Removed onHome prop
+const Header = ({ user, onLogout, onLoginClick, onNotificationClick, onProfileClick }) => {
+  return (
+    <header className="bg-blue-600 text-white p-4 shadow-lg sticky top-0 z-40"> {/* Added sticky positioning */}
+      <div className="max-w-7xl mx-auto flex justify-between items-center">
+        {/* Left Side: Logo and Title - Use Link */}
+        <Link
+          to="/" // Link to the home page route
+>>>>>>> origin/front-end
           className="flex items-center space-x-2 hover:bg-blue-700 px-3 py-2 rounded-md transition-colors"
         >
           <Building className="w-8 h-8" />
@@ -18,6 +33,7 @@ const Header = ({ user, onLogout, onLoginClick, onProfileClick }) => {
           </div>
         </Link>
 
+<<<<<<< HEAD
         {/* Right Side: Icons and User Actions */}
         <div className="flex items-center space-x-4">
         
@@ -26,10 +42,34 @@ const Header = ({ user, onLogout, onLoginClick, onProfileClick }) => {
               {/* Profile Button */}
               <button
                 onClick={onProfileClick}
+=======
+        {/* Right Side: Icons and User Info/Actions */}
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <>
+              {/* Bell Icon (Logged In) - Toggles NotificationsPanel */}
+              <button
+                onClick={onNotificationClick} // Directly use the toggle function
+                className="p-2 rounded-full hover:bg-blue-700 transition-colors relative" // Added relative for potential badge
+                aria-label="Notifications"
+              >
+                <Bell className="w-5 h-5" />
+                {/* Basic notification indicator example - can be enhanced */}
+                {/* <span className="absolute top-0 right-0 block h-2 w-2 rounded-full ring-2 ring-white bg-red-400"></span> */}
+              </button>
+
+              {/* Profile Button (Logged In) - Toggles ProfileDropdown */}
+              <button
+                onClick={onProfileClick} // Directly use the toggle function
+>>>>>>> origin/front-end
                 className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-700 transition-colors"
                 aria-label="User Profile"
               >
                 <User className="w-5 h-5" />
+<<<<<<< HEAD
+=======
+                {/* Optionally hide name on smaller screens if needed */}
+>>>>>>> origin/front-end
                 <span className="hidden sm:inline">{user.name}</span>
               </button>
 
@@ -38,16 +78,36 @@ const Header = ({ user, onLogout, onLoginClick, onProfileClick }) => {
                 onClick={onLogout}
                 className="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded-md transition-colors flex items-center space-x-1"
               >
+<<<<<<< HEAD
                 <LogOut className="w-4 h-4" />
+=======
+                 <LogOut className="w-4 h-4" />
+>>>>>>> origin/front-end
                 <span>Logout</span>
               </button>
             </>
           ) : (
             <>
+<<<<<<< HEAD
               {/* Profile Button (Logged Out) */}
               <button
                 onClick={onProfileClick}
                 className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-700 transition-colors"
+=======
+              {/* Bell Icon (Logged Out) - Prompts Login */}
+               <button
+                onClick={onNotificationClick} // Still uses the handler which will prompt login
+                className="p-2 rounded-full hover:bg-blue-700 transition-colors"
+                aria-label="Notifications"
+              >
+                <Bell className="w-5 h-5" />
+              </button>
+
+              {/* Profile Button (Logged Out) - Prompts Login */}
+              <button
+                onClick={onProfileClick} // Still uses the handler which will prompt login
+                 className="flex items-center space-x-2 p-2 rounded-md hover:bg-blue-700 transition-colors"
+>>>>>>> origin/front-end
                 aria-label="User Profile"
               >
                 <User className="w-5 h-5" />
@@ -59,7 +119,11 @@ const Header = ({ user, onLogout, onLoginClick, onProfileClick }) => {
                 onClick={onLoginClick}
                 className="bg-white hover:bg-gray-100 text-blue-600 px-4 py-2 rounded-md transition-colors flex items-center space-x-1 font-semibold"
               >
+<<<<<<< HEAD
                 <LogIn className="w-4 h-4" />
+=======
+                 <LogIn className="w-4 h-4" />
+>>>>>>> origin/front-end
                 <span>Login</span>
               </button>
             </>
@@ -70,4 +134,8 @@ const Header = ({ user, onLogout, onLoginClick, onProfileClick }) => {
   );
 };
 
+<<<<<<< HEAD
 export default Header;
+=======
+export default Header;
+>>>>>>> origin/front-end
