@@ -24,7 +24,6 @@ const ComplaintDetails = () => {
     );
   }
 
-  // Dummy progress updates
   const complaintUpdates = [
     { description: "Complaint lodged successfully.", update_time: "2025-10-20T10:15:00Z" },
     { description: "Assigned to municipal officer for review.", update_time: "2025-10-21T11:00:00Z" },

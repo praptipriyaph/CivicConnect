@@ -102,7 +102,7 @@ const GovernmentComplaintsDashboard = () => {
       <ol className="relative border-l border-blue-200 ml-4">
         {c.updates.map((u, i) => (
           <li key={i} className="mb-8 ml-6">
-            {/* ✅ FIXED COLOR LOGIC */}
+            {}
             <span
               className={`absolute flex items-center justify-center w-4 h-4 rounded-full -left-2 ring-2 ring-white ${
                 u.stage === "Closed" ? "bg-blue-600" : "bg-blue-600"
@@ -196,17 +196,17 @@ const GovernmentComplaintsDashboard = () => {
   return (
     <div className="space-y-10">
       <section>
-        <h2 className="text-xl font-bold text-gray-800 mb-3">📬 Forwarded Complaints</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-3">Forwarded Complaints</h2>
         {categorized.forwarded.length ? paginate(categorized.forwarded, "new") : <p className="text-gray-500 text-sm">No forwarded complaints.</p>}
       </section>
 
       <section>
-        <h2 className="text-xl font-bold text-gray-800 mb-3">⚙️ Active Complaints</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-3">Active Complaints</h2>
         {categorized.active.length ? paginate(categorized.active, "active") : <p className="text-gray-500 text-sm">No active complaints.</p>}
       </section>
 
       <section>
-        <h2 className="text-xl font-bold text-gray-800 mb-3">✅ Closed Complaints</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-3">Closed Complaints</h2>
         {categorized.closed.length ? paginate(categorized.closed, "closed") : <p className="text-gray-500 text-sm">No closed complaints.</p>}
       </section>
     </div>

@@ -81,8 +81,8 @@ const GovernmentOverview = () => {
           <YAxis />
           <Tooltip />
           <Legend />
-          <Bar dataKey="resolved" fill="#34d399" name="Resolved" />
-          <Bar dataKey="pending" fill="#60a5fa" name="In Progress" />
+          <Bar dataKey="resolved" fill="#055e3dff" name="Resolved" />
+          <Bar dataKey="pending" fill="#04101eff" name="In Progress" />
         </BarChart>
       </div>
     </div>

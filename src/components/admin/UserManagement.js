@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useState } from "react";
 import { Edit, Trash2, UserPlus, X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
@@ -50,7 +49,7 @@ const UserManagement = () => {
 
   const [error, setError] = useState("");
 
-  // ✅ Open Add User modal
+  // Open Add User modal
   const openAddModal = () => {
     setFormData({
       first_name: "",
@@ -65,7 +64,7 @@ const UserManagement = () => {
     setShowModal(true);
   };
 
-  // ✅ Open Edit modal with existing data
+  // Open Edit modal with existing data
   const openEditModal = (user) => {
     setFormData({
       first_name: user.first_name,
@@ -80,7 +79,7 @@ const UserManagement = () => {
     setShowModal(true);
   };
 
-  // ✅ Handle Add or Edit Submit
+  // Handle Add or Edit Submit
   const handleSubmit = (e) => {
     e.preventDefault();
     if (
@@ -103,7 +102,7 @@ const UserManagement = () => {
             : u
         )
       );
-      alert("✅ User details updated successfully!");
+      alert("User details updated successfully!");
     } else {
       // Add new user
       const newUser = {
@@ -116,19 +115,19 @@ const UserManagement = () => {
         created_at: new Date().toISOString(),
       };
       setUsers([...users, newUser]);
-      alert("✅ New user added successfully!");
+      alert("New user added successfully!");
     }
 
     setShowModal(false);
     setError("");
   };
 
-  // ✅ Delete User with confirmation
+  // Delete User with confirmation
   const handleDelete = (id, name) => {
     const confirmDelete = window.confirm(`Delete user "${name}"?`);
     if (confirmDelete) {
       setUsers((prev) => prev.filter((u) => u.id !== id));
-      alert(`🗑️ User "${name}" deleted successfully.`);
+      alert(` User "${name}" deleted successfully.`);
     }
   };
 
@@ -196,7 +195,7 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* 🔹 Add/Edit Modal */}
+      {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative animate-fadeIn">
@@ -293,52 +292,8 @@ const UserManagement = () => {
           </div>
         </div>
       )}
-=======
-import React from 'react';
-import { Edit, Trash2 } from 'lucide-react';
-
-const UserManagement = () => {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-6">User Management</h2>
-      <div className="space-y-4">
-        <div className="flex justify-between items-center p-4 border border-gray-200 rounded-lg">
-          <div>
-            <h3 className="font-medium">John Citizen</h3>
-            <p className="text-sm text-gray-600">Citizen • Active</p>
-          </div>
-          <div className="flex space-x-2">
-            <button className="text-blue-600 hover:text-blue-800">
-              <Edit className="w-4 h-4" />
-            </button>
-            <button className="text-red-600 hover:text-red-800">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-        
-        <div className="flex justify-between items-center p-4 border border-gray-200 rounded-lg">
-          <div>
-            <h3 className="font-medium">Gov Official</h3>
-            <p className="text-sm text-gray-600">Government • Active</p>
-          </div>
-          <div className="flex space-x-2">
-            <button className="text-blue-600 hover:text-blue-800">
-              <Edit className="w-4 h-4" />
-            </button>
-            <button className="text-red-600 hover:text-red-800">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
->>>>>>> origin/front-end
     </div>
   );
 };
 
-<<<<<<< HEAD
 export default UserManagement;
-=======
-export default UserManagement;
->>>>>>> origin/front-end

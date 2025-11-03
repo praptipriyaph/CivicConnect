@@ -16,7 +16,6 @@ import { COMPLAINT_STATUS } from "../../utils/constants";
 const PreviousComplaints = () => {
   const navigate = useNavigate();
 
-  // 🧩 Mock previous (closed) complaint data
   const mockComplaints = [
     {
       id: 101,
@@ -89,7 +88,7 @@ const PreviousComplaints = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // 🧠 Filter + Sort logic
+  // Filter + Sort logic
   const filteredAndSorted = useMemo(() => {
     let result = [...mockComplaints];
 
