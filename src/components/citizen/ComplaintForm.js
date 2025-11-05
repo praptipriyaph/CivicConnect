@@ -1,8 +1,13 @@
 // ComplaintForm.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, X } from "lucide-react";
+import { ArrowLeft, X, MapPin } from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+import LocationPicker from '../common/LocationPicker';
+import 'leaflet/dist/leaflet.css';
+
+// <-- NEW: Add your Mappls REST API Key here
+const MAPPLS_API_KEY = "jqcijfwqdxvgugbysdmnoatuyfjkbpzdrsfk";
 
 const initialFormState = {
   name: "",
@@ -14,6 +19,8 @@ const initialFormState = {
   addressLine1: "",
   addressLine2: "",
   addressLine3: "",
+  location_latitude: null, // For the map
+  location_longitude: null, // For the map
   evidence: [],
 };
 
@@ -21,9 +28,15 @@ const ComplaintForm = ({ onSubmitComplaint }) => {
   const [formData, setFormData] = useState(initialFormState);
   const [errors, setErrors] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isSearching, setIsSearching] = useState(false);
   const navigate = useNavigate();
 
-  // Updated: single popup, success toast for added images
+  const mapPosition = formData.location_latitude
+    ? [formData.location_latitude, formData.location_longitude]
+    : null;
+
+  // ... (handleChange, handleRemoveImage, validateField, validateAll functions are unchanged) ...
+  // ... (Paste your existing functions here) ...
   const handleChange = (e) => {
     const { name, value, files } = e.target;
 
@@ -153,11 +166,14 @@ const ComplaintForm = ({ onSubmitComplaint }) => {
       URL.createObjectURL(file)
     );
 
+    // <-- MODIFIED: This now includes lat/lng
     const newComplaint = {
       id: complaintId,
       title,
       description: formData.description,
       location,
+      latitude: formData.location_latitude, // <-- NEW
+      longitude: formData.location_longitude, // <-- NEW
       submittedDate,
       status: "SUBMITTED",
       citizen: {
@@ -182,13 +198,102 @@ const ComplaintForm = ({ onSubmitComplaint }) => {
     navigate("/track-complaint", { state: { complaintId } });
   };
 
-  return (
-    <div className="relative min-h-screen flex justify-center bg-gradient-to-br from-slate-50 to-slate-200 py-10 px-6">
-      {/* Toast Container */}
-      <Toaster position="top-center" reverseOrder={false} />
+  // <-- MODIFIED: Mappls Geocoding Function (Address -> Coords)
+  // <-- MODIFIED: Mappls Geocoding Function (Address -> Coords)
+  const handleAddressSearch = async () => {
+    const query = [
+      formData.addressLine1,
+      formData.addressLine2,
+      formData.addressLine3,
+    ]
+      .filter(Boolean)
+      .join(", ");
 
+    if (query.trim().length < 5) {
+      toast.error("Please enter a more specific address to search.");
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      // Mappls Geocoding API (using the 'geo_code' endpoint)
+      // Note: The key is in the URL path, and the parameter is 'addr'
+      const response = await fetch(
+        `https://apis.mapmyindia.com/advancedmaps/v1/${MAPPLS_API_KEY}/geo_code?addr=${encodeURIComponent(query)}`
+      );
+      
+      const data = await response.json();
+
+      // The response structure is different for this endpoint
+      if (data.results && data.results.length > 0) {
+        const { lat, lng, formatted_address } = data.results[0];
+        
+        setFormData((prev) => ({
+          ...prev,
+          location_latitude: parseFloat(lat),
+          location_longitude: parseFloat(lng),
+          ...parseMapplsAddress(formatted_address) // Uses your existing helper function
+        }));
+        toast.success("Location found!");
+      } else {
+        toast.error("Location not found. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error geocoding:", error);
+      toast.error("An error occurred while searching.");
+    }
+    setIsSearching(false);
+  };
+  
+  // <-- MODIFIED: Mappls Reverse Geocoding Function (Coords -> Address)
+  const handleLocationSelect = async (latlng) => {
+    const { lat, lng } = latlng;
+    
+    setFormData(prevData => ({
+      ...prevData,
+      location_latitude: lat,
+      location_longitude: lng
+    }));
+
+    try {
+        // Mappls Reverse Geocoding (using the key in the URL path)
+        const response = await fetch(
+          `https://apis.mapmyindia.com/advancedmaps/v1/${MAPPLS_API_KEY}/rev_geocode?lat=${lat}&lng=${lng}`
+        );
+        const data = await response.json();
+  
+        if (data.results && data.results.length > 0) {
+          const { houseNumber, street, subLocality, locality, city, state, pincode } = data.results[0];
+          
+          setFormData(prevData => ({
+            ...prevData,
+            addressLine1: `${houseNumber || ''} ${street || ''}`.trim(),
+            addressLine2: subLocality || locality || '',
+            addressLine3: `${city || ""} ${state || ""} ${pincode || ""}`.trim(),
+          }));
+        }
+      } catch (error) {
+        console.error("Error reverse geocoding:", error);
+        toast.error("Could not fetch address for this location.");
+      }
+  };
+  // <-- NEW: Helper function to parse Mappls formatted address
+  const parseMapplsAddress = (formatted) => {
+    if (!formatted) return {};
+    const parts = formatted.split(',').map(s => s.trim());
+    return {
+        addressLine1: parts[0] || '',
+        addressLine2: parts[1] || '',
+        addressLine3: parts.slice(2).join(', ') || ''
+    }
+  };
+
+
+  return (
+    // ... (Your entire JSX <form> remains exactly the same) ...
+    <div className="relative min-h-screen flex justify-center bg-gradient-to-br from-slate-50 to-slate-200 py-10 px-6">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="relative w-full max-w-2xl flex items-start gap-3">
-        {/* Back Arrow */}
         <button
           onClick={() => navigate("/")}
           className="sticky top-24 self-start bg-white shadow-md rounded-full p-2 hover:bg-blue-50 transition"
@@ -196,7 +301,6 @@ const ComplaintForm = ({ onSubmitComplaint }) => {
           <ArrowLeft className="w-6 h-6 text-gray-700" />
         </button>
 
-        {/*Complaint Form */}
         <form
           onSubmit={handleSubmit}
           className="flex-1 bg-white shadow-lg rounded-2xl p-8 space-y-6 border border-gray-200"
@@ -293,6 +397,33 @@ const ComplaintForm = ({ onSubmitComplaint }) => {
               placeholder="Address Line 3 (Optional)"
               className="w-full rounded-lg border border-gray-300 p-3"
             />
+            {/* Search Button */}
+            <button
+              type="button" 
+              onClick={handleAddressSearch}
+              disabled={isSearching}
+              className="w-full flex justify-center items-center gap-2 py-2 px-4 bg-blue-100 text-blue-700 font-medium rounded-lg hover:bg-blue-200 transition disabled:bg-gray-200"
+            >
+              <MapPin className="w-5 h-5" />
+              {isSearching ? "Searching..." : "Find on Map"}
+            </button>
+          </div>
+
+          {/* Map Picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Pin Location on Map
+            </label>
+            <LocationPicker
+              position={mapPosition} 
+              onLocationSelect={handleLocationSelect}
+            />
+            {formData.location_latitude && (
+              <p className="text-sm text-gray-600 mt-2">
+                Selected: Lat: {formData.location_latitude.toFixed(6)}, 
+                Lng: {formData.location_longitude.toFixed(6)}
+              </p>
+            )}
           </div>
 
           {/* Issue Category */}
