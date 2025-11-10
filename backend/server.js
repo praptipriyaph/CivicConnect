@@ -255,63 +255,77 @@ app.patch("/api/admin-update-complaint",requireAuth(),async (req,res)=>{
   }
 })
 
+app.patch("/api/citizen-recheck-complaint", requireAuth(), async (req, res) => {
+  try {
+    const { userId: clerk_id } = getAuth(req);
+    const { complaint_id, description } = req.body;
 
-app.patch("/api/citizen-recheck-complaint",requireAuth(),async (req,res)=>{
-  try{
-    const {userId:clerk_id} = getAuth(req)
-    const {username} = await clerkClient.users.getUser(clerk_id);
-    const {complaint_id,description}=req.body
-    const {error} = await supabase.from("complaints").update({
-      status: "reopened"
-  }).eq("complaint_id",complaint_id)
-    
-  if(error) throw error;
+    // Step 1️⃣: Move complaint back to "open"
+    const { data, error } = await supabase
+      .from("complaints")
+      .update({ status: "open" })
+      .eq("complaint_id", complaint_id)
+      .select("*")
+      .single();
 
-  const {error:update_error} = await supabase.from("complaint_updates").insert([
+    if (error) throw error;
+
+    // Step 2️⃣: Log update with [Lodged] prefix — so it visually resets to the start
+    const prefixedDesc = `[Lodged] ${description || "Complaint reopened by citizen for re-evaluation."}`;
+
+    const { error: update_error } = await supabase.from("complaint_updates").insert([
       {
-        description:description,
-        complaint_id:complaint_id,
-        updated_by : clerk_id
-      }
-    ])
+        complaint_id,
+        description: prefixedDesc,
+        updated_by: clerk_id,
+      },
+    ]);
 
-    if(update_error) throw update_error;
+    if (update_error) throw update_error;
 
-    res.status(200).json({message:"Success!"})
+    res.status(200).json({
+      message: "Complaint successfully reopened and sent back to open stage.",
+      data,
+    });
+  } catch (error) {
+    console.error("❌ Citizen recheck error:", error);
+    res.status(500).json({ error: error.message });
   }
-  catch(error){
-    res.status(500).json({error:error.message})
-  }
-})
+});
+
+
 
 //used by both admin and citizen
-app.post("/api/close-complaint",requireAuth(),async (req,res)=>{
-  try{
-    const {userId:clerk_id} = getAuth(req)
-    const {username} = await clerkClient.users.getUser(clerk_id);
-    const {role,complaint_id,description}=req.body
-    const {data,error} = await supabase.from("complaints").update({
-      status: "closed"
-  }).eq("complaint_id",complaint_id).select("*").single();
-    
-  if(error) throw error
+app.post("/api/close-complaint", requireAuth(), async (req, res) => {
+  try {
+    const { userId: clerk_id } = getAuth(req);
+    const { complaint_id, description } = req.body;
 
-  const {error:update_error} =  await supabase.from("complaint_updates").insert([
+    const { data, error } = await supabase
+      .from("complaints")
+      .update({ status: "closed" })
+      .eq("complaint_id", complaint_id)
+      .select("*")
+      .single();
+    if (error) throw error;
+
+    const prefixedDesc = `[Closed] ${description}`;
+
+    const { error: update_error } = await supabase.from("complaint_updates").insert([
       {
-        description:description,
-        complaint_id:complaint_id,
-        updated_by : clerk_id
-      }
-    ])
+        complaint_id,
+        description: prefixedDesc,
+        updated_by: clerk_id,
+      },
+    ]);
+    if (update_error) throw update_error;
 
-    if(update_error) throw update_error
-    console.log(data)
-    res.status(200).json(data)
+    res.status(200).json(data);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-  catch(error){
-    res.status(500).json({error:error.message})
-  }
-})
+});
+
 
 
 app.get("/api/departments", requireAuth(), async (req, res) => {
@@ -439,36 +453,30 @@ app.patch("/api/govt-update-complaint", requireAuth(), async (req, res) => {
     const { userId: clerk_id } = getAuth(req);
     const { complaint_id, description, stage } = req.body;
 
-    // 1️⃣ Fetch the user + their department
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("department_id, role")
-      .eq("clerk_id", clerk_id)
-      .single();
-
-    if (userError) throw userError;
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    // 2️⃣ Determine the next valid status
+    // Determine new status
     let newStatus = null;
     if (stage === "In Progress") newStatus = "in_progress";
     else if (stage === "Resolved") newStatus = "resolved";
     else return res.status(400).json({ error: "Invalid stage transition" });
 
-    // 3️⃣ Update the complaint’s status
+    // Update complaint
     const { data, error } = await supabase
       .from("complaints")
       .update({ status: newStatus })
       .eq("complaint_id", complaint_id)
-      .select("*");
+      .select("*")
+      .single();
     if (error) throw error;
 
-    // 4️⃣ Log the update — using Clerk ID (valid FK)
+    // 🔹 Prefix description for clarity
+    const prefixedDesc = `[${stage}] ${description}`;
+
+    // Insert update
     const { error: updateError } = await supabase.from("complaint_updates").insert([
       {
         complaint_id,
-        description,
-        updated_by: clerk_id, // ✅ uses FK, safe & clean
+        description: prefixedDesc,
+        updated_by: clerk_id,
       },
     ]);
     if (updateError) throw updateError;
@@ -479,6 +487,7 @@ app.patch("/api/govt-update-complaint", requireAuth(), async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 
 app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {

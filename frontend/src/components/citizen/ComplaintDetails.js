@@ -10,18 +10,22 @@ import {
 } from "lucide-react";
 import StatusBadge from "../common/StatusBadge";
 import { useApiService } from "../../services/api";
+import { useUser } from "@clerk/clerk-react";
 
 const ComplaintDetails = () => {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const apiService = useApiService();
+  const { user } = useUser();
 
   const [complaint, setComplaint] = useState(location.state?.complaint || null);
   const [updates, setUpdates] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [loading, setLoading] = useState(!complaint);
   const [error, setError] = useState(null);
+  const [closing, setClosing] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   const stages = ["Lodged", "Assigned", "In Progress", "Resolved", "Closed"];
   const stageOrder = {
@@ -88,16 +92,107 @@ const ComplaintDetails = () => {
     fetchUpdates();
   }, [id]);
 
-  if (loading) {
+  const currentIndex = stageOrder[complaint?.status?.toLowerCase()] ?? 0;
+
+  const images = complaint?.images?.length
+    ? complaint.images.map(formatImageUrl)
+    : complaint?.image
+    ? [formatImageUrl(complaint.image)]
+    : [];
+
+  // 🧠 Stage inference
+  const inferStage = (update) => {
+    const desc = update.description?.trim() || "";
+    const role = update.role?.toLowerCase() || "";
+    const prefixMatch = desc.match(/^\[(.*?)\]/);
+    if (prefixMatch) return prefixMatch[1].trim();
+
+    const lower = desc.toLowerCase();
+    if (lower.includes("assign")) return "Assigned";
+    if (lower.includes("progress") || lower.includes("working"))
+      return "In Progress";
+    if (lower.includes("resolve") || lower.includes("fixed"))
+      return "Resolved";
+    if (lower.includes("close")) return "Closed";
+    if (lower.includes("reopen")) return "Lodged"; // ✅ treat reopen as restart
+    if (role === "citizen") return "Lodged";
+    if (role === "admin" || role === "official") return "Assigned";
+    return "Lodged";
+  };
+
+  const stageColor = {
+    Lodged: "bg-blue-100 text-blue-700 border-blue-300",
+    Assigned: "bg-yellow-100 text-yellow-700 border-yellow-300",
+    "In Progress": "bg-purple-100 text-purple-700 border-purple-300",
+    Resolved: "bg-green-100 text-green-700 border-green-300",
+    Closed: "bg-gray-200 text-gray-800 border-gray-300",
+  };
+
+  // ✅ Smoothly update local UI after close
+  const handleCloseComplaint = async () => {
+    try {
+      setClosing(true);
+      await apiService.closeComplaint({
+        complaint_id: complaint.complaint_id,
+        description: "[Closed] Complaint closed by citizen after verification.",
+      });
+
+      // 🔄 Update state immediately
+      setComplaint((prev) => ({ ...prev, status: "closed" }));
+      setUpdates((prev) => [
+        ...prev,
+        {
+          description: "[Closed] Complaint closed by citizen after verification.",
+          update_time: new Date().toISOString(),
+          updated_by: user?.id || "Citizen",
+          role: "citizen",
+        },
+      ]);
+    } catch (err) {
+      console.error("Error closing complaint:", err);
+      alert("Failed to close complaint.");
+    } finally {
+      setClosing(false);
+    }
+  };
+
+  // ✅ Smoothly update local UI after reopen
+  const handleReopenComplaint = async () => {
+    try {
+      setReopening(true);
+      await apiService.citizenRecheckComplaint({
+        complaint_id: complaint.complaint_id,
+        description: "Complaint reopened by citizen for re-evaluation.",
+      });
+
+      // 🔄 Update state immediately
+      setComplaint((prev) => ({ ...prev, status: "open" }));
+      setUpdates((prev) => [
+        ...prev,
+        {
+          description: "[Lodged] Complaint reopened by citizen for re-evaluation.",
+          update_time: new Date().toISOString(),
+          updated_by: user?.id || "Citizen",
+          role: "citizen",
+        },
+      ]);
+    } catch (err) {
+      console.error("Error reopening complaint:", err);
+      alert("Failed to reopen complaint.");
+    } finally {
+      setReopening(false);
+    }
+  };
+
+  if (loading)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-gray-600">
         <Loader className="w-8 h-8 animate-spin mb-3 text-blue-600" />
         <p>Loading complaint details...</p>
       </div>
     );
-  }
 
-  if (error || !complaint) {
+  if (error || !complaint)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-gray-500">
         <p>{error || `No complaint found for ID #${id}`}</p>
@@ -109,34 +204,6 @@ const ComplaintDetails = () => {
         </button>
       </div>
     );
-  }
-
-  const normalizedStatus = complaint.status?.toLowerCase();
-  const currentIndex = stageOrder[normalizedStatus] ?? 0;
-
-  const images = complaint.images?.length
-    ? complaint.images.map(formatImageUrl)
-    : complaint.image
-    ? [formatImageUrl(complaint.image)]
-    : [];
-
-  // 🎨 Stage color mapping
-  const stageColor = {
-    Lodged: "bg-blue-100 text-blue-700 border-blue-300",
-    Assigned: "bg-yellow-100 text-yellow-700 border-yellow-300",
-    "In Progress": "bg-purple-100 text-purple-700 border-purple-300",
-    Resolved: "bg-green-100 text-green-700 border-green-300",
-    Reopened: "bg-orange-100 text-orange-700 border-orange-300",
-    Closed: "bg-gray-200 text-gray-800 border-gray-300",
-  };
-
-  // 🧠 Format status for badge display
-  const formatStage = (status) => {
-    if (!status) return "Lodged";
-    return status
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-6 flex flex-col items-center">
@@ -166,28 +233,50 @@ const ComplaintDetails = () => {
           <div className="flex flex-wrap text-sm text-gray-600 space-x-4 mb-4">
             <span className="flex items-center">
               <MapPin className="w-4 h-4 mr-1" />
-              {complaint.latitude && complaint.longitude
-                ? `Coordinates: ${complaint.latitude}, ${complaint.longitude}`
-                : complaint.location || "Location not provided"}
+              {complaint.location || "Location not provided"}
             </span>
             <span className="flex items-center">
               <Calendar className="w-4 h-4 mr-1" />
               Submitted: {formatDate(complaint.created_at)}
             </span>
           </div>
+
+          {/* ✅ Close / Reopen Buttons */}
+          {complaint.status === "resolved" && (
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={handleCloseComplaint}
+                disabled={closing}
+                className={`px-4 py-2 text-white text-sm rounded-md ${
+                  closing ? "bg-gray-400" : "bg-green-600 hover:bg-green-700"
+                }`}
+              >
+                {closing ? "Closing..." : "Close Complaint"}
+              </button>
+              <button
+                onClick={handleReopenComplaint}
+                disabled={reopening}
+                className={`px-4 py-2 text-white text-sm rounded-md ${
+                  reopening ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"
+                }`}
+              >
+                {reopening ? "Reopening..." : "Reopen Complaint"}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* 🧭 Stage progress */}
+        {/* 🧭 Stage Progress */}
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800 mb-6">
             Complaint Progress
           </h3>
 
-          {/* Horizontal progress line */}
+          {/* Progress Bar */}
           <div className="flex justify-between relative mb-8">
             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200"></div>
             {stages.map((s, i) => {
-              const isCompleted = i <= currentIndex;
+              const isCompleted = i <= (stageOrder[complaint.status?.toLowerCase()] ?? 0);
               return (
                 <div key={s} className="relative flex flex-col items-center z-10">
                   <div
@@ -211,14 +300,13 @@ const ComplaintDetails = () => {
             })}
           </div>
 
-          {/* 🕓 All Updates (status-driven) */}
+          {/* Timeline Updates */}
           <div className="space-y-4">
             {updates.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No updates yet.</p>
             ) : (
               updates.map((u, idx) => {
-                const stage = formatStage(u.status || "open");
-
+                const stage = inferStage(u);
                 return (
                   <div
                     key={idx}

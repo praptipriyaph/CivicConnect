@@ -340,7 +340,7 @@ const GovernmentComplaintsDashboard = () => {
         )}
       </section>
 
-      <section>
+      {/* <section>
         <h2 className="text-xl font-bold text-gray-800 mb-3">
           Active Complaints
         </h2>
@@ -360,7 +360,7 @@ const GovernmentComplaintsDashboard = () => {
         ) : (
           <p className="text-gray-500 text-sm">No closed complaints.</p>
         )}
-      </section>
+      </section> */}
     </div>
   );
 };
