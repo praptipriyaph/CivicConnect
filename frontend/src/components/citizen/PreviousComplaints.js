@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin,
@@ -9,114 +9,131 @@ import {
   SortAsc,
   SortDesc,
   ArrowLeft,
+  Loader,
 } from "lucide-react";
 import StatusBadge from "../common/StatusBadge";
 import { COMPLAINT_STATUS } from "../../utils/constants";
+import { useApiService } from "../../services/api";
 
 const PreviousComplaints = () => {
   const navigate = useNavigate();
+  const apiService = useApiService();
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const mockComplaints = [
-    {
-      id: 101,
-      title: "Potholes fixed on main road",
-      description: "Resurfacing done successfully in Ward 5.",
-      location: "Ward 5",
-      submittedDate: "2025-10-14",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-      category: "road",
-    },
-    {
-      id: 102,
-      title: "Streetlight repair completed",
-      description: "Streetlights restored near the park area.",
-      location: "Sector 7",
-      submittedDate: "2025-10-11",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-      category: "electricity",
-    },
-    {
-      id: 103,
-      title: "Garbage cleared in Block A",
-      description: "Garbage pickup resumed after delay.",
-      location: "Block A",
-      submittedDate: "2025-09-29",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-      category: "garbage",
-    },
-    {
-      id: 104,
-      title: "Drainage unclogged",
-      description: "Water flow restored successfully.",
-      location: "Sector 12",
-      submittedDate: "2025-09-25",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-      category: "water",
-    },
-    {
-      id: 105,
-      title: "Park maintenance done",
-      description: "Broken benches and lamps fixed.",
-      location: "Sector 3",
-      submittedDate: "2025-09-20",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-      category: "other",
-    },
-    {
-      id: 106,
-      title: "Potholes fixed at crossing",
-      description: "City road department completed patchwork.",
-      location: "Main Crossing",
-      submittedDate: "2025-09-18",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-      category: "road",
-    },
-    {
-      id: 107,
-      title: "Power outage resolved",
-      description: "Transformer replaced successfully.",
-      location: "Ward 8",
-      submittedDate: "2025-09-10",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-      category: "electricity",
-    },
-  ];
+  // ✅ Load complaints
+  useEffect(() => {
+    const loadComplaints = async () => {
+      try {
+        setLoading(true);
+        const data = await apiService.getCitizenComplaints();
+        setAllComplaints(data);
+      } catch (err) {
+        console.error("Error loading complaints:", err);
+        setError("Failed to load complaints");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadComplaints();
+  }, []);
 
-  // State for filters & pagination
+  // ✅ Filter only closed
+  const closedComplaints = useMemo(() => {
+    return allComplaints.filter(
+      (c) =>
+        c.status?.toLowerCase() === COMPLAINT_STATUS.CLOSED.toLowerCase() ||
+        c.status?.toLowerCase() === "resolved"
+    );
+  }, [allComplaints]);
+
+  // Pagination + filters
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [dateOrder, setDateOrder] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // Filter + Sort logic
-  const filteredAndSorted = useMemo(() => {
-    let result = [...mockComplaints];
+  // ✅ Unified location resolver
+  const resolveLocationText = (c) => {
+    if (!c) return "Location not provided";
+    if (c.latitude && c.longitude)
+      return `${c.latitude}, ${c.longitude}`;
+    if (c.location && c.location.trim().length > 0)
+      return c.location;
+    if (Array.isArray(c.coordinates) && c.coordinates.length === 2)
+      return `${c.coordinates[0]}, ${c.coordinates[1]}`;
+    return "Location not provided";
+  };
 
-    // Filter by category
+  // ✅ Format date safely
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    const parsed = new Date(dateStr);
+    if (isNaN(parsed.getTime())) return dateStr;
+    return parsed.toLocaleString("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    });
+  };
+
+  // ✅ Filter + sort
+  const filteredAndSorted = useMemo(() => {
+    let result = [...closedComplaints];
+
     if (selectedCategory !== "all") {
       result = result.filter(
         (c) =>
-          (c.category || "").toString().trim().toLowerCase() ===
-          selectedCategory.trim().toLowerCase()
+          (c.category || "")
+            .toString()
+            .trim()
+            .toLowerCase() === selectedCategory.trim().toLowerCase()
       );
     }
 
-    // Sort by date safely
     result.sort((a, b) => {
-      const dA = new Date(a.submittedDate || 0);
-      const dB = new Date(b.submittedDate || 0);
+      const dA = new Date(a.created_at || a.submittedDate || 0);
+      const dB = new Date(b.created_at || b.submittedDate || 0);
       return dateOrder === "asc" ? dA - dB : dB - dA;
     });
 
     return result;
-  }, [mockComplaints, selectedCategory, dateOrder]);
+  }, [closedComplaints, selectedCategory, dateOrder]);
 
-  // Pagination
+  // ✅ Pagination
   const paginated = filteredAndSorted.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
+
+  // ✅ Loading + Error states
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Loading previous complaints...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center p-6 bg-gray-50 min-h-screen">
@@ -135,9 +152,8 @@ const PreviousComplaints = () => {
             </h2>
           </div>
 
-          {/* Category Filter + Date Sort */}
+          {/* Filters */}
           <div className="flex gap-3 items-center flex-wrap mt-3 md:mt-0">
-            {/* Category Filter */}
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
@@ -151,7 +167,6 @@ const PreviousComplaints = () => {
               <option value="other">Other</option>
             </select>
 
-            {/* Date Sort */}
             <button
               onClick={() =>
                 setDateOrder((prev) => (prev === "asc" ? "desc" : "asc"))
@@ -160,13 +175,11 @@ const PreviousComplaints = () => {
             >
               {dateOrder === "asc" ? (
                 <>
-                  <SortAsc className="w-4 h-4 mr-1 text-blue-600" />
-                  Date ↑
+                  <SortAsc className="w-4 h-4 mr-1 text-blue-600" /> Date ↑
                 </>
               ) : (
                 <>
-                  <SortDesc className="w-4 h-4 mr-1 text-blue-600" />
-                  Date ↓
+                  <SortDesc className="w-4 h-4 mr-1 text-blue-600" /> Date ↓
                 </>
               )}
             </button>
@@ -181,28 +194,44 @@ const PreviousComplaints = () => {
         ) : (
           paginated.map((c) => (
             <div
-              key={c.id}
-              className="border border-gray-200 rounded-lg p-4 mb-4 hover:shadow transition"
+              key={c.complaint_id || c.id}
+              className="border border-gray-200 rounded-lg p-4 mb-4 hover:shadow transition cursor-pointer"
+              onClick={() =>
+                navigate(`/complaint/${c.complaint_id || c.id}`, {
+                  state: { complaint: c },
+                })
+              }
             >
               <div className="flex justify-between items-start">
                 <h3 className="font-medium text-gray-900">
                   {c.title}{" "}
-                  <span className="text-gray-500 text-sm">#{c.id}</span>
+                  <span className="text-gray-500 text-sm">
+                    #{c.complaint_id || c.id}
+                  </span>
                 </h3>
                 <StatusBadge status={c.status} />
               </div>
+
               <p className="text-sm text-gray-600 mt-1">{c.description}</p>
+
               <div className="flex justify-between text-xs text-gray-500 mt-2">
                 <span className="flex items-center">
-                  <MapPin className="w-4 h-4 mr-1" /> {c.location}
+                  <MapPin className="w-4 h-4 mr-1" />{" "}
+                  {resolveLocationText(c)}
                 </span>
                 <span className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-1" /> {c.submittedDate}
+                  <Calendar className="w-4 h-4 mr-1" />{" "}
+                  {formatDate(c.created_at || c.submittedDate)}
                 </span>
               </div>
+
               <p className="text-xs text-gray-400 mt-1 capitalize">
                 Category: {c.category || "N/A"}
               </p>
+
+              <div className="mt-2 text-blue-600 text-xs font-medium hover:underline">
+                View Details →
+              </div>
             </div>
           ))
         )}

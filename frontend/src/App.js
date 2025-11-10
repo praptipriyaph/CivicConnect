@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { useAuth, useUser } from '@clerk/clerk-react';
 
 // Page imports
 import LandingPage from './pages/LandingPage';
 import AdminPortal from './pages/AdminPortal';
 import GovPortal from './pages/GovernmentPortal';
+import GovtSelect from './pages/GovtSelect';
 
 // Component imports
 import LoginModal from './components/common/LoginModal';
@@ -15,9 +17,10 @@ import ProfileDropdown from './components/common/ProfileDropdown';
 import NotificationsPanel from './components/common/NotificationsPanel';
 import ComplaintDetails from './components/citizen/ComplaintDetails';
 import PreviousComplaints from "./components/citizen/PreviousComplaints";
+import RoleSelectionModal from './components/common/RoleSelectionModal';
 
-// Data and constants
-import { mockComplaints as initialMockComplaints } from './utils/mockData';
+// API and constants
+import { useApiService } from './services/api';
 import { USER_ROLES, COMPLAINT_STATUS } from './utils/constants';
 
 // ---- Helper Components ----
@@ -36,118 +39,135 @@ const AdminLoginPage = ({ onLogin }) => {
   );
 };
 
-const ProtectedRoute = ({ user, allowedRoles, children }) => {
+const ProtectedRoute = ({ allowedRoles, children }) => {
+  const { isLoaded, isSignedIn } = useAuth();
   const location = useLocation();
-  if (!user) {
+
+  if (!isLoaded) {
+    return <div>Loading...</div>; // Or a proper loading component
+  }
+
+  if (!isSignedIn) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
-  }
+
+  // Note: Role-based access control will be handled by backend API
+  // Frontend routes are protected by authentication only
   return children;
 };
 
 // ---- Main App Component ----
 const App = () => {
-  const [user, setUser] = useState(null);
-  const [complaints, setComplaints] = useState(initialMockComplaints);
+  const { isLoaded, userId, isSignedIn } = useAuth();
+  const { user } = useUser();
+  const apiService = useApiService();
+
+  const [complaints, setComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPurpose, setLoginPurpose] = useState('');
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Load user data and complaints when authenticated
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!isLoaded || !isSignedIn || !userId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Save/update user in database
+        if (user) {
+          const userData = {
+            clerk_id: userId,
+            username: user.username || user.primaryEmailAddress?.emailAddress.split('@')[0],
+            email: user.primaryEmailAddress?.emailAddress,
+            first_name: user.firstName || '',
+            last_name: user.lastName || '',
+            role: 'citizen', // Default role, will be updated via modal
+          };
+
+          try {
+            const response = await apiService.saveUser(userData);
+            
+            // If new user, show role selection modal
+            if (response && response.isNewUser) {
+              setShowRoleModal(true);
+            }
+          } catch (saveError) {
+            console.error('Error saving user:', saveError);
+            // Don't throw - continue even if user save fails
+          }
+        }
+
+        // Load complaints based on user role
+        // This will be handled by individual components
+
+      } catch (err) {
+        console.error('Error loading user data:', err);
+        setError('Failed to load user data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn, userId]); // Use userId instead of user object to prevent re-runs
 
   useEffect(() => {
     setShowProfileDropdown(false);
     setShowNotificationsPanel(false);
   }, [location.pathname]);
 
-  const promptLogin = (purpose) => {
-    setLoginPurpose(purpose);
-    setShowLoginModal(true);
-    setShowProfileDropdown(false);
-    setShowNotificationsPanel(false);
-  };
-
-  const handleLogin = (userData) => {
-    setUser(userData);
-    setShowLoginModal(false);
-    const origin = location.state?.from?.pathname;
-    let redirectTo = '/';
-
-    if (loginPurpose === '/complaint-form' || loginPurpose === '/track-complaint') {
-      redirectTo =
-        userData.role === USER_ROLES.CITIZEN
-          ? loginPurpose
-          : userData.role === USER_ROLES.ADMIN
-          ? '/admin-dashboard'
-          : userData.role === USER_ROLES.GOVERNMENT
-          ? '/gov-portal'
-          : '/';
-    } else if (origin && origin !== '/') {
-      if (origin === '/admin-dashboard' && userData.role !== USER_ROLES.ADMIN)
-        redirectTo = '/';
-      else if (origin === '/gov-portal' && userData.role !== USER_ROLES.GOVERNMENT)
-        redirectTo = '/';
-      else if (
-        (origin === '/complaint-form' || origin === '/track-complaint') &&
-        userData.role !== USER_ROLES.CITIZEN
-      )
-        redirectTo = '/';
-      else redirectTo = origin;
-    } else {
-      switch (userData.role) {
-        case USER_ROLES.ADMIN:
-          redirectTo = '/admin-dashboard';
-          break;
-        case USER_ROLES.GOVERNMENT:
-          redirectTo = '/gov-portal';
-          break;
-        case USER_ROLES.CITIZEN:
-          redirectTo = '/';
-          break;
-        default:
-          redirectTo = '/';
-          break;
-      }
-    }
-
-    if (loginPurpose === 'profile' && redirectTo !== '/')
-      setShowProfileDropdown(true);
-    if (loginPurpose === 'notifications' && redirectTo !== '/')
-      setShowNotificationsPanel(true);
-
-    setLoginPurpose('');
-    navigate(redirectTo, { replace: true });
-  };
-
+  // With Clerk, we don't need manual login/logout handling
   const handleLogout = () => {
-    setUser(null);
     setShowProfileDropdown(false);
     setShowNotificationsPanel(false);
     navigate('/');
   };
 
-  const handleSubmitComplaint = (newComplaintData) => {
-    const complaintToAdd = {
-      ...newComplaintData,
-      id: Date.now(),
-      status: COMPLAINT_STATUS.LODGED,
-      submittedDate: new Date().toISOString().split('T')[0],
-      lastUpdated: new Date().toISOString().split('T')[0],
-      submittedById: user ? user.id : null,
-      submittedBy: user ? user.name : 'Anonymous',
-      assignedByAdmin: null,
-      assignedToDept: null,
-      actionOfficer: null,
-      resolutionDetails: null,
-      rating: null,
-    };
-    setComplaints((prev) => [...prev, complaintToAdd]);
-    alert('Grievance submitted successfully! Your Grievance ID is: #' + complaintToAdd.id);
-    navigate('/track-complaint');
+  const handleSubmitComplaint = async (complaintData) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Transform frontend data to backend format
+      const apiComplaintData = {
+        user_id: userId,
+        username: user?.fullName || 'Anonymous',
+        title: complaintData.title || complaintData.issueCategory,
+        description: complaintData.description,
+        latitude: complaintData.latitude || null,
+        longitude: complaintData.longitude || null,
+        image: complaintData.image || null,
+        tag: complaintData.category || complaintData.issueCategory,
+      };
+
+      const response = await apiService.raiseComplaint(apiComplaintData);
+
+      // Success - navigate to tracking page
+      navigate('/track-complaint', {
+        state: { complaintId: response.complaint_id }
+      });
+
+    } catch (err) {
+      console.error('Error submitting complaint:', err);
+      setError('Failed to submit complaint. Please try again.');
+      alert('Failed to submit complaint. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpdateComplaint = (id, updates) => {
@@ -160,131 +180,90 @@ const App = () => {
     );
   };
 
-  const handleLoginClick = () => promptLogin('login-button');
   const handleNotificationClick = () => {
-    if (!user) promptLogin('notifications');
-    else {
-      setShowNotificationsPanel((prev) => !prev);
-      setShowProfileDropdown(false);
+    if (!isSignedIn) {
+      // Redirect to sign in or show message
+      alert('Please sign in to view notifications');
+      return;
     }
+    setShowNotificationsPanel((prev) => !prev);
+    setShowProfileDropdown(false);
   };
+
   const handleProfileClick = () => {
-    if (!user) promptLogin('profile');
-    else {
-      setShowProfileDropdown((prev) => !prev);
-      setShowNotificationsPanel(false);
+    if (!isSignedIn) {
+      // Redirect to sign in or show message
+      alert('Please sign in to view profile');
+      return;
     }
+    setShowProfileDropdown((prev) => !prev);
+    setShowNotificationsPanel(false);
   };
 
   const handleLandingNavigation = (targetPath) => {
-    if (!user) {
-      promptLogin(targetPath);
+    if (!isSignedIn) {
+      // With Clerk, this will redirect to Clerk's sign-in page
+      navigate('/sign-in');
+      return;
+    }
+
+    // For citizen-specific routes, check if user has citizen role
+    // This is a simplified check - in production, you'd check user metadata
+    if (targetPath === '/complaint-form' || targetPath === '/track-complaint') {
+      navigate(targetPath);
     } else {
-      if (
-        user.role === USER_ROLES.CITIZEN &&
-        (targetPath === '/complaint-form' || targetPath === '/track-complaint')
-      ) {
-        navigate(targetPath);
-      } else if (
-        user.role !== USER_ROLES.CITIZEN &&
-        (targetPath === '/complaint-form' || targetPath === '/track-complaint')
-      ) {
-        alert('This action is only available for citizens.');
-      } else {
-        navigate(targetPath);
-      }
+      navigate(targetPath);
     }
   };
 
-  const handleOutsideClick = (e) => {};
 
-  const loggedInDemoComplaints = [
-    {
-      id: 9001,
-      title: "Streetlight near park flickering",
-      description: "Streetlight near the park intermittently turns off.",
-      location: "Ward 6",
-      category: "electricity",
-      submittedDate: "2025-10-20",
-      status: COMPLAINT_STATUS.UNDER_PROCESS,
-    },
-    {
-      id: 9002,
-      title: "Overflowing garbage bin",
-      description: "Garbage bin near market overflowing for 2 days.",
-      location: "Sector 11",
-      category: "garbage",
-      submittedDate: "2025-10-18",
-      status: COMPLAINT_STATUS.ACTION_TAKEN,
-    },
-    {
-      id: 9003,
-      title: "Water leakage on road",
-      description: "Continuous water leakage near temple junction.",
-      location: "Ward 2",
-      category: "water",
-      submittedDate: "2025-10-17",
-      status: COMPLAINT_STATUS.UNDER_PROCESS,
-    },
-  ];
-
-  const loggedInPreviousDemo = [
-    {
-      id: 9101,
-      title: "Potholes repaired successfully",
-      description: "Main road repaired within 5 days.",
-      location: "Sector 5",
-      category: "road",
-      submittedDate: "2025-09-25",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-    },
-    {
-      id: 9102,
-      title: "Garbage collection restored",
-      description: "Collection resumed regularly now.",
-      location: "Ward 8",
-      category: "garbage",
-      submittedDate: "2025-09-26",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-    },
-    {
-      id: 9103,
-      title: "Broken light fixed",
-      description: "Streetlight issue resolved promptly.",
-      location: "Sector 10",
-      category: "electricity",
-      submittedDate: "2025-09-27",
-      status: COMPLAINT_STATUS.CLOSED_CONFIRMED,
-    },
-  ];
+  // Show loading state while Clerk is loading
+  if (!isLoaded) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="relative min-h-screen">
       <Header
         user={user}
+        isSignedIn={isSignedIn}
         onLogout={handleLogout}
-        onLoginClick={handleLoginClick}
         onNotificationClick={handleNotificationClick}
         onProfileClick={handleProfileClick}
       />
 
-      {showProfileDropdown && (
+      {showProfileDropdown && user && (
         <ProfileDropdown user={user} onClose={() => setShowProfileDropdown(false)} />
       )}
       {showNotificationsPanel && (
         <NotificationsPanel onClose={() => setShowNotificationsPanel(false)} />
       )}
 
-      <main className="pt-4 px-4 sm:px-6 lg:px-8" onClick={handleOutsideClick}>
+      {/* Role Selection Modal for New Users */}
+      <RoleSelectionModal
+        isOpen={showRoleModal}
+        onRoleSelected={(role) => {
+          setShowRoleModal(false);
+          // Redirect based on selected role
+          if (role === 'admin') {
+            navigate('/admin-dashboard');
+          } else if (role === 'official') {
+            navigate('/gov-selection');
+          } else {
+            navigate('/');
+          }
+        }}
+      />
+
+      <main className="pt-4 px-4 sm:px-6 lg:px-8">
         <Routes>
           <Route path="/" element={<LandingPage onNavigate={handleLandingNavigation} />} />
-          <Route path="/admin-login" element={<AdminLoginPage onLogin={handleLogin} />} />
 
           {/* CITIZEN ROUTES */}
           <Route
             path="/complaint-form"
             element={
-              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.CITIZEN]}>
+              <ProtectedRoute>
                 <ComplaintForm onSubmitComplaint={handleSubmitComplaint} />
               </ProtectedRoute>
             }
@@ -293,15 +272,8 @@ const App = () => {
           <Route
             path="/track-complaint"
             element={
-              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.CITIZEN]}>
-                <ComplaintTracking
-                  complaints={[
-                    ...loggedInDemoComplaints,
-                    ...(user
-                      ? complaints.filter((c) => c.submittedById === user.id)
-                      : []),
-                  ]}
-                />
+              <ProtectedRoute>
+                <ComplaintTracking />
               </ProtectedRoute>
             }
           />
@@ -309,20 +281,8 @@ const App = () => {
           <Route
             path="/previous-complaints"
             element={
-              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.CITIZEN]}>
-                <PreviousComplaints
-                  complaints={[
-                    ...loggedInPreviousDemo,
-                    ...(user
-                      ? complaints.filter(
-                          (c) =>
-                            c.submittedById === user.id &&
-                            (c.status === COMPLAINT_STATUS.CLOSED_CONFIRMED ||
-                              c.status === COMPLAINT_STATUS.CLOSED_APPEALED)
-                        )
-                      : []),
-                  ]}
-                />
+              <ProtectedRoute>
+                <PreviousComplaints />
               </ProtectedRoute>
             }
           />
@@ -330,7 +290,7 @@ const App = () => {
           <Route
             path="/complaint/:id"
             element={
-              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.CITIZEN]}>
+              <ProtectedRoute>
                 <ComplaintDetails />
               </ProtectedRoute>
             }
@@ -340,12 +300,8 @@ const App = () => {
           <Route
             path="/admin-dashboard"
             element={
-              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.ADMIN]}>
-                <AdminPortal
-                  complaints={complaints}
-                  onUpdateComplaint={handleUpdateComplaint}
-                  user={user}
-                />
+              <ProtectedRoute>
+                <AdminPortal />
               </ProtectedRoute>
             }
           />
@@ -353,12 +309,17 @@ const App = () => {
           <Route
             path="/gov-portal"
             element={
-              <ProtectedRoute user={user} allowedRoles={[USER_ROLES.GOVERNMENT]}>
-                <GovPortal
-                  complaints={complaints}
-                  onUpdateComplaint={handleUpdateComplaint}
-                  user={user}
-                />
+              <ProtectedRoute>
+                <GovPortal />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path='/gov-selection'
+            element={
+              <ProtectedRoute>
+                <GovtSelect/>
               </ProtectedRoute>
             }
           />
@@ -366,13 +327,6 @@ const App = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-
-      <LoginModal
-        isOpen={showLoginModal && location.pathname !== '/admin-login'}
-        onClose={() => setShowLoginModal(false)}
-        onLogin={handleLogin}
-        purpose={loginPurpose}
-      />
     </div>
   );
 };

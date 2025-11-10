@@ -4,25 +4,25 @@ export const USER_ROLES = {
   GOVERNMENT: 'Government' // Represents Departmental Action Officers
 };
 
-// Updated Statuses reflecting the new flow
+// Updated Statuses to match backend API
 export const COMPLAINT_STATUS = {
-  // Citizen actions
-  LODGED: 'Lodged', // Initial status upon submission
+  // Initial status
+  LODGED: 'open', // Initial status upon submission
 
   // Admin/Nodal Officer actions
-  UNDER_SCRUTINY: 'Under Scrutiny', // When admin starts reviewing
-  FORWARDED: 'Forwarded to Department', // Assigned to Govt Dept
-  REJECTED_BY_ADMIN: 'Rejected by Admin', // Rejected during initial review
-  MORE_INFO_NEEDED: 'More Information Needed', // Admin needs more from citizen
+  UNDER_SCRUTINY: 'under_scrutiny', // When admin starts reviewing (custom status)
+  ASSIGNED: 'assigned', // Assigned to Govt Dept
+  REJECTED_BY_ADMIN: 'rejected_admin', // Rejected during initial review (custom status)
+  MORE_INFO_NEEDED: 'more_info_needed', // Admin needs more from citizen (custom status)
 
   // Government Official actions
-  UNDER_PROCESS: 'Under Process', // Dept acknowledges/starts work (replaces 'In Progress')
-  ACTION_TAKEN: 'Action Taken', // Issue resolved/action completed
-  REJECTED_BY_DEPT: 'Rejected by Department', // Dept cannot resolve/invalid
+  IN_PROGRESS: 'in_progress', // Dept acknowledges/starts work
+  ACTION_TAKEN: 'action_taken', // Issue resolved/action completed (custom status)
+  REJECTED_BY_DEPT: 'rejected_dept', // Dept cannot resolve/invalid (custom status)
 
-  // Citizen final actions
-  CLOSED_CONFIRMED: 'Closed (Confirmed)', // Citizen satisfied
-  CLOSED_APPEALED: 'Closed (Appealed)', // Citizen unsatisfied, appealed
+  // Final statuses
+  CLOSED: 'closed', // Final closed status
+  REOPENED: 'reopened', // Citizen reopened the complaint
 };
 
 // Keep Priority Levels

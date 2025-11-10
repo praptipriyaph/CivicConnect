@@ -22,8 +22,10 @@ const ProfileDropdown = ({ user, onClose }) => {
           <div className="flex items-center space-x-3 mb-2">
              <User className="w-8 h-8 text-gray-500 rounded-full bg-gray-100 p-1" />
              <div>
-               <p className="text-sm font-medium text-gray-900 truncate">{user.name}</p>
-               <p className="text-xs text-gray-500">{user.role}</p>
+               <p className="text-sm font-medium text-gray-900 truncate">
+                 {user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim()}
+               </p>
+               <p className="text-xs text-gray-500">{user.primaryEmailAddress?.emailAddress}</p>
              </div>
           </div>
           <p className="text-xs text-gray-500">ID: {user.id}</p>
