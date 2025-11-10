@@ -271,7 +271,7 @@ app.patch("/api/citizen-recheck-complaint",requireAuth(),async (req,res)=>{
       {
         description:description,
         complaint_id:complaint_id,
-        updated_by : username
+        updated_by : clerk_id
       }
     ])
 
@@ -434,11 +434,13 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
 
 
 
+app.patch("/api/govt-update-complaint", requireAuth(), async (req, res) => {
+  try {
+    const { userId: clerk_id } = getAuth(req);
+    const { complaint_id, description, stage } = req.body;
 
-app.patch("/api/govt-update-complaint",requireAuth(),async (req,res)=>{
-  try{
-    const {userId:clerk_id} = getAuth(req)
-      const { data: user, error: userError } = await supabase
+    // 1️⃣ Fetch the user + their department
+    const { data: user, error: userError } = await supabase
       .from("users")
       .select("department_id, role")
       .eq("clerk_id", clerk_id)
@@ -447,44 +449,43 @@ app.patch("/api/govt-update-complaint",requireAuth(),async (req,res)=>{
     if (userError) throw userError;
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Step 2️⃣ Get department details
-    const { data: department, error: deptError } = await supabase
-      .from("departments")
-      .select("department_id, name")
-      .eq("department_id", user.department_id)
-      .single();
-    const {complaint_id,description} = req.body
-    const {data,error} = await supabase.from("complaints").update({
-      "status" : "in_progress",
-    }).eq("complaint_id",complaint_id)
-    
+    // 2️⃣ Determine the next valid status
+    let newStatus = null;
+    if (stage === "In Progress") newStatus = "in_progress";
+    else if (stage === "Resolved") newStatus = "resolved";
+    else return res.status(400).json({ error: "Invalid stage transition" });
 
-    if(error) throw error
+    // 3️⃣ Update the complaint’s status
+    const { data, error } = await supabase
+      .from("complaints")
+      .update({ status: newStatus })
+      .eq("complaint_id", complaint_id)
+      .select("*");
+    if (error) throw error;
 
-    const {error : update_error} = await supabase.from("complaint_updates").insert([
+    // 4️⃣ Log the update — using Clerk ID (valid FK)
+    const { error: updateError } = await supabase.from("complaint_updates").insert([
       {
-        complaint_id : complaint_id,
-        description : description,
-        updated_by : department.department_id
-      }
-    ])
+        complaint_id,
+        description,
+        updated_by: clerk_id, // ✅ uses FK, safe & clean
+      },
+    ]);
+    if (updateError) throw updateError;
 
-    if(update_error) throw update_error
-
-    res.status(200).json(data)
-
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("❌ Govt update error:", error);
+    res.status(500).json({ error: error.message });
   }
-  catch(error){
-    res.status(500).json({error:error.message})
-  }
-})
+});
 
 
 app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {
   try {
     const { complaint_id } = req.body;
 
-    // 1️⃣ Get all updates for this complaint
+    // 1️⃣ Get all updates
     const { data: updates, error: updatesError } = await supabase
       .from("complaint_updates")
       .select("*")
@@ -492,41 +493,55 @@ app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {
       .order("update_time", { ascending: true });
 
     if (updatesError) throw updatesError;
-    if (!updates || updates.length === 0) {
-      return res.status(200).json([]); // no updates found
-    }
+    if (!updates || updates.length === 0)
+      return res.status(200).json([]);
 
-    // 2️⃣ Get unique list of all updaters (Clerk IDs)
+    // 2️⃣ Get all unique updaters
     const clerkIds = [...new Set(updates.map((u) => u.updated_by))];
 
-    // 3️⃣ Fetch user info (role + names) for these Clerk IDs
+    // 3️⃣ Fetch user info (with department_id)
     const { data: users, error: usersError } = await supabase
       .from("users")
-      .select("clerk_id, role, first_name, last_name")
+      .select("clerk_id, role, first_name, last_name, department_id")
       .in("clerk_id", clerkIds);
 
     if (usersError) throw usersError;
 
-    // 4️⃣ Merge user info into each update
+    // 4️⃣ Fetch department names (for officials only)
+    const deptIds = [...new Set(users.map((u) => u.department_id).filter(Boolean))];
+    const { data: departments } = await supabase
+      .from("departments")
+      .select("department_id, name")
+      .in("department_id", deptIds);
+
+    // 5️⃣ Merge details
     const enrichedUpdates = updates.map((u) => {
       const user = users?.find((usr) => usr.clerk_id === u.updated_by);
       const fullName = user
         ? `${user.first_name || ""} ${user.last_name || ""}`.trim()
-        : "Unknown";
+        : "Unknown User";
+
+      let deptLabel = "";
+      if (user?.role === "official") {
+        const dept = departments?.find((d) => d.department_id === user.department_id);
+        deptLabel = dept ? dept.name : "Unknown Department";
+      }
+
       return {
         ...u,
         role: user?.role || "Unknown",
         name: fullName || "Unknown User",
+        department: deptLabel || null, // only for officials
       };
     });
-    console.log(enrichedUpdates)
-    // 5️⃣ Return updates with name + role included
+
     res.status(200).json(enrichedUpdates);
   } catch (error) {
     console.error("Error fetching complaint updates:", error);
     res.status(500).json({ error: error.message });
   }
 });
+
 
 
 app.use((req, res) => {

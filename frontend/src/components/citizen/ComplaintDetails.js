@@ -5,20 +5,11 @@ import {
   MapPin,
   Calendar,
   Clock,
-  Mail,
-  Phone,
-  User,
   Loader,
   CheckCircle2,
 } from "lucide-react";
 import StatusBadge from "../common/StatusBadge";
 import { useApiService } from "../../services/api";
-
-/**
- * Simplified + enhanced Complaint Details
- * - Stage progress bar from status
- * - Updates feed with inferred stage badges
- */
 
 const ComplaintDetails = () => {
   const { id } = useParams();
@@ -58,7 +49,7 @@ const ComplaintDetails = () => {
     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/complaint_images/${img}`;
   };
 
-  // fetch complaint if page refreshed
+  // 🧭 Fetch complaint if refreshed
   useEffect(() => {
     const fetchComplaint = async () => {
       if (complaint) return;
@@ -78,7 +69,7 @@ const ComplaintDetails = () => {
     fetchComplaint();
   }, [id]);
 
-  // fetch updates
+  // 🕓 Fetch updates
   useEffect(() => {
     const fetchUpdates = async () => {
       if (!id) return;
@@ -120,7 +111,8 @@ const ComplaintDetails = () => {
     );
   }
 
-  const currentIndex = stageOrder[complaint.status?.toLowerCase()] ?? 0;
+  const normalizedStatus = complaint.status?.toLowerCase();
+  const currentIndex = stageOrder[normalizedStatus] ?? 0;
 
   const images = complaint.images?.length
     ? complaint.images.map(formatImageUrl)
@@ -128,27 +120,22 @@ const ComplaintDetails = () => {
     ? [formatImageUrl(complaint.image)]
     : [];
 
-// 🧠 Improved smart stage inference (based on text + role)
-const inferStage = (update) => {
-  const desc = update.description?.toLowerCase() || "";
-  const role = update.role?.toLowerCase() || "";
-
-  if (desc.includes("assign")) return "Assigned";
-  if (desc.includes("progress") || desc.includes("working")) return "In Progress";
-  if (desc.includes("resolve") || desc.includes("fixed")) return "Resolved";
-  if (desc.includes("close") || desc.includes("not valid")) return "Closed";
-  if (role === "citizen") return "Lodged";
-  if (role === "admin" || role === "officer") return "Assigned";
-  return "Lodged";
-};
-
-
+  // 🎨 Stage color mapping
   const stageColor = {
     Lodged: "bg-blue-100 text-blue-700 border-blue-300",
     Assigned: "bg-yellow-100 text-yellow-700 border-yellow-300",
     "In Progress": "bg-purple-100 text-purple-700 border-purple-300",
     Resolved: "bg-green-100 text-green-700 border-green-300",
-    Closed: "bg-gray-100 text-gray-700 border-gray-300",
+    Reopened: "bg-orange-100 text-orange-700 border-orange-300",
+    Closed: "bg-gray-200 text-gray-800 border-gray-300",
+  };
+
+  // 🧠 Format status for badge display
+  const formatStage = (status) => {
+    if (!status) return "Lodged";
+    return status
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
   return (
@@ -202,10 +189,7 @@ const inferStage = (update) => {
             {stages.map((s, i) => {
               const isCompleted = i <= currentIndex;
               return (
-                <div
-                  key={s}
-                  className="relative flex flex-col items-center z-10"
-                >
+                <div key={s} className="relative flex flex-col items-center z-10">
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                       isCompleted
@@ -227,13 +211,14 @@ const inferStage = (update) => {
             })}
           </div>
 
-          {/* 🕓 All Updates */}
+          {/* 🕓 All Updates (status-driven) */}
           <div className="space-y-4">
             {updates.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No updates yet.</p>
             ) : (
               updates.map((u, idx) => {
-                const stage = inferStage(u);
+                const stage = formatStage(u.status || "open");
+
                 return (
                   <div
                     key={idx}
@@ -241,7 +226,10 @@ const inferStage = (update) => {
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span
-                        className={`px-3 py-1 text-xs font-semibold border rounded-full ${stageColor[stage]}`}
+                        className={`px-3 py-1 text-xs font-semibold border rounded-full ${
+                          stageColor[stage] ||
+                          "bg-gray-100 text-gray-700 border-gray-300"
+                        }`}
                       >
                         {stage}
                       </span>
@@ -250,7 +238,9 @@ const inferStage = (update) => {
                     <div className="flex items-center text-xs text-gray-500 mt-2 space-x-3">
                       <span className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
-                        {formatDate(u.update_time || u.updated_at || u.created_at)}
+                        {formatDate(
+                          u.update_time || u.updated_at || u.created_at
+                        )}
                       </span>
                       <span>•</span>
                       <span>
@@ -269,49 +259,7 @@ const inferStage = (update) => {
             )}
           </div>
         </div>
-
-        {/* 🖼 Images */}
-        {images.length > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              Image Evidence
-            </h3>
-            <div className="flex gap-3 flex-wrap">
-              {images.map((img, idx) => (
-                <img
-                  key={idx}
-                  src={img}
-                  alt={`Evidence ${idx + 1}`}
-                  className="w-32 h-32 object-cover rounded-lg border border-gray-200 shadow-sm cursor-pointer hover:scale-105 transition-transform"
-                  onClick={() => setSelectedImage(img)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* 🖼 Full Image Popup */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
-          onClick={() => setSelectedImage(null)}
-        >
-          <div className="relative" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-2 right-2 text-white text-3xl font-bold bg-black bg-opacity-50 rounded-full px-2"
-            >
-              ×
-            </button>
-            <img
-              src={selectedImage}
-              alt="Full View"
-              className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
