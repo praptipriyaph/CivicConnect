@@ -7,6 +7,11 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "echo \"No build step required\""
+  "description": "Backend server for CivicConnect (Node + Express + Supabase + Clerk)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
   },
   "dependencies": {
     "@clerk/express": "^1.7.33",

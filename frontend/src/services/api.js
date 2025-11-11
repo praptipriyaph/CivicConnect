@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class ApiService {
   constructor() {
-    this.baseURL = 'http://localhost:5000';
+    this.baseURL = process.env.REACT_APP_API_URL || "http://localhost:5000";
     this.client = axios.create({
       baseURL: this.baseURL
     });
