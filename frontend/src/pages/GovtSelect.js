@@ -3,20 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useApiService } from '../services/api';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-
 const GovtSelect = () => {
-  const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const navigate = useNavigate();
   const api = useApiService();
   const queryClient = useQueryClient();
 
-
-useQuery({
-  queryKey: ['departments'],
-  queryFn: api.getDepartments,
-  onSuccess: (data) => setDepartments(data || [])
-});
+  const { data: departments = [], isLoading } = useQuery({
+    queryKey: ['departments'],
+    queryFn: api.getDepartments,
+  });
 
   const setDept = useMutation({
     mutationFn: (id) => api.setGovernmentDepartment(id),
@@ -24,7 +20,7 @@ useQuery({
       queryClient.invalidateQueries({ queryKey: ['govComplaints'] });
       navigate('/gov-portal');
     },
-    onError: () => alert('Error assigning department')
+    onError: () => alert('Error assigning department'),
   });
 
   const handleSubmit = (e) => {
@@ -40,26 +36,31 @@ useQuery({
         </h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label 
-              htmlFor="department" 
+            <label
+              htmlFor="department"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
               Department
             </label>
-            <select
-              id="department"
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            >
-              <option value="">Select a department</option>
-              {departments.map((dept) => (
-                <option key={dept.department_id} value={dept.department_id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
+
+            {isLoading ? (
+              <p>Loading departments...</p>
+            ) : (
+              <select
+                id="department"
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select a department</option>
+                {departments.map((dept) => (
+                  <option key={dept.department_id} value={dept.department_id}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <button
             type="submit"
