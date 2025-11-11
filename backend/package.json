@@ -1,5 +1,12 @@
 {
+  "name": "civicconnect-backend",
+  "version": "1.0.0",
+  "description": "Backend server for CivicConnect (Node + Express + Supabase + Clerk)",
   "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
     "@clerk/express": "^1.7.33",
     "@supabase/supabase-js": "^2.58.0",
