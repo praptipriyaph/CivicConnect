@@ -12,7 +12,6 @@ const GovernmentPortal = () => {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
       <aside className="w-64 bg-blue-800 text-white flex flex-col shadow-lg">
         <div className="p-5 border-b border-blue-700">
           <h1 className="text-lg font-semibold tracking-wide">
@@ -22,7 +21,6 @@ const GovernmentPortal = () => {
         </div>
 
         <nav className="flex-1 mt-4 space-y-1">
-          {/* Complaints Tab */}
           <button
             onClick={() => setActiveTab("dashboard")}
             className={`flex items-center w-full text-left px-5 py-3 ${
@@ -35,7 +33,6 @@ const GovernmentPortal = () => {
             Complaints
           </button>
 
-          {/* Analytics Tab */}
           <button
             onClick={() => setActiveTab("analytics")}
             className={`flex items-center w-full text-left px-5 py-3 ${
@@ -50,7 +47,6 @@ const GovernmentPortal = () => {
         </nav>
       </aside>
 
-      {/* Main Section */}
       <main className="flex-1 p-8">
         <div className="flex justify-between items-center mb-6 border-b pb-3">
           <div>
@@ -68,7 +64,6 @@ const GovernmentPortal = () => {
           <ChevronRight className="w-5 h-5 text-blue-500" />
         </div>
 
-        {/* Tab Content */}
         {activeTab === "dashboard" && <GovernmentComplaintsDashboard />}
         {activeTab === "analytics" && <GovernmentAnalytics />}
       </main>

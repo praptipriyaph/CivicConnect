@@ -20,12 +20,10 @@ export const COMPLAINT_STATUS = {
   ACTION_TAKEN: 'action_taken', // Issue resolved/action completed (custom status)
   REJECTED_BY_DEPT: 'rejected_dept', // Dept cannot resolve/invalid (custom status)
 
-  // Final statuses
   CLOSED: 'closed', // Final closed status
-  REOPENED: 'reopened', // Citizen reopened the complaint
+  REOPENED: 'reopened', 
 };
 
-// Keep Priority Levels
 export const PRIORITY_LEVELS = {
   LOW: 'Low',
   MEDIUM: 'Medium',

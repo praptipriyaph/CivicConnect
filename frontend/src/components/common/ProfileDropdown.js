@@ -5,7 +5,6 @@ const ProfileDropdown = ({ user, onClose }) => {
   if (!user) return null;
 
   return (
-    // Position fixed, top-right, adjust styling as needed
     <div className="fixed top-16 right-4 z-50 mt-2 w-64 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
       <div className="py-1">
          <div className="flex justify-between items-center px-4 py-2 border-b">
@@ -30,7 +29,6 @@ const ProfileDropdown = ({ user, onClose }) => {
           </div>
           <p className="text-xs text-gray-500">ID: {user.id}</p>
         </div>
-        {/* Add more profile links/actions here if needed */}
          {/* <div className="border-t border-gray-100"></div>
          <a href="#settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Account settings</a> */}
       </div>

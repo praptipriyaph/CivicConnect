@@ -18,7 +18,6 @@ const AdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [slideIn, setSlideIn] = useState(false);
 
-  // Use react-query data/isLoading/error
   const { data, isLoading, error } = useQuery({
     queryKey: ["adminComplaints"],
     queryFn: apiService.getAdminComplaints,
@@ -29,7 +28,6 @@ const AdminDashboard = () => {
     setTimeout(() => setSlideIn(true), 100);
   }, []);
 
-  // Stats (derive from complaints)
   const stats = {
     total: complaints.length,
     open: complaints.filter((c) => (c.status || "").toLowerCase() === "open").length,
@@ -80,7 +78,6 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Header */}
       <div className="bg-blue-600 text-white px-8 py-4 shadow-md">
         <h1 className="text-2xl font-semibold tracking-wide">
           Grievance Scrutiny Dashboard
@@ -90,13 +87,11 @@ const AdminDashboard = () => {
         </p>
       </div>
 
-      {/* Main Content */}
       <div
         className={`flex-1 transition-all duration-700 ease-out transform ${
           slideIn ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"
         } p-6 space-y-8`}
       >
-        {/* Stats Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
             { label: "Total Complaints", value: stats.total, icon: FileText, color: "blue" },
@@ -121,7 +116,6 @@ const AdminDashboard = () => {
           ))}
         </div>
 
-        {/* Filter & Search */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
@@ -134,7 +128,6 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                 <input
@@ -146,7 +139,6 @@ const AdminDashboard = () => {
                 />
               </div>
 
-              {/* Filter Dropdown */}
               <div className="flex items-center border border-gray-300 rounded-md px-2 py-1 bg-gray-50">
                 <Filter className="w-4 h-4 text-gray-400 mr-1" />
                 <select
@@ -164,7 +156,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Complaints Table */}
           <div className="overflow-x-auto mt-6 rounded-lg border border-gray-100">
             <table className="w-full text-sm">
               <thead className="bg-blue-50 text-gray-700 uppercase text-xs">

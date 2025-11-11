@@ -1,5 +1,4 @@
-// GovernmentOverview.js
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -8,23 +7,76 @@ import {
   Tooltip,
   CartesianGrid,
   Legend,
+  ResponsiveContainer,
 } from "recharts";
-
-const dummyDepartments = [
-  { name: "Roads", total: 12, inProgress: 4, resolved: 8 },
-  { name: "Electricity", total: 11, inProgress: 5, resolved: 6 },
-  { name: "Water Supply", total: 14, inProgress: 3, resolved: 11 },
-  { name: "Sanitation", total: 9, inProgress: 2, resolved: 7 },
-];
+import { useApiService } from "../../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 const GovernmentOverview = () => {
+  const apiService = useApiService();
   const [selected, setSelected] = useState(null);
 
-  const analyticsData = dummyDepartments.map((dept) => ({
-    department: dept.name,
-    resolved: dept.resolved,
-    pending: dept.inProgress,
-  }));
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["govComplaintsAll"],
+    queryFn: apiService.getGovernmentComplaintsAll,
+  });
+
+  const analyticsData = useMemo(() => {
+    if (!data || !data.complaints) return [];
+    const deptName = data.department_name || "Department";
+    const complaints = data.complaints;
+
+    const total = complaints.length;
+    const inProgress = complaints.filter(
+      (c) => c.status?.toLowerCase() === "in_progress"
+    ).length;
+    const resolved = complaints.filter(
+      (c) => ["resolved", "closed"].includes(c.status?.toLowerCase())
+    ).length;
+    const assigned = complaints.filter(
+      (c) => c.status?.toLowerCase() === "assigned"
+    ).length;
+
+    return [
+      {
+        department: deptName,
+        total,
+        assigned,
+        inProgress,
+        resolved,
+      },
+    ];
+  }, [data]);
+
+  const departmentCards = useMemo(() => {
+    if (!analyticsData.length) return [];
+    const d = analyticsData[0];
+    return [
+      {
+        name: d.department,
+        total: d.total,
+        assigned: d.assigned,
+        inProgress: d.inProgress,
+        resolved: d.resolved,
+      },
+    ];
+  }, [analyticsData]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading analytics...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <p className="text-red-600">Failed to load analytics.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen p-8">
@@ -32,13 +84,12 @@ const GovernmentOverview = () => {
         Government Department Overview & Analytics
       </h1>
 
-      {/* Department Cards Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 mb-8">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Department Overview
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {dummyDepartments.map((dept) => (
+          {departmentCards.map((dept) => (
             <div
               key={dept.name}
               onClick={() => setSelected(dept)}
@@ -50,7 +101,7 @@ const GovernmentOverview = () => {
             >
               <h3 className="font-semibold text-gray-800">{dept.name}</h3>
               <p className="text-sm text-gray-600">
-                Total: {dept.total} | In Progress: {dept.inProgress} | Resolved:{" "}
+                Total: {dept.total} | Assigned: {dept.assigned} | In Progress: {dept.inProgress} | Resolved:{" "}
                 {dept.resolved}
               </p>
             </div>
@@ -63,27 +114,30 @@ const GovernmentOverview = () => {
               {selected.name} Department Details
             </h3>
             <p className="text-sm text-gray-600 mt-1">
-              Currently handling {selected.inProgress} complaints out of{" "}
-              {selected.total}.
+              Assigned: {selected.assigned}, In Progress: {selected.inProgress}, Resolved: {selected.resolved} out of {selected.total} complaints.
             </p>
           </div>
         )}
       </div>
 
-      {/* Analytics Section */}
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
           Department-wise Complaint Summary
         </h2>
-        <BarChart width={700} height={350} data={analyticsData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="department" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          <Bar dataKey="resolved" fill="#055e3dff" name="Resolved" />
-          <Bar dataKey="pending" fill="#04101eff" name="In Progress" />
-        </BarChart>
+        <div className="w-full h-96">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={analyticsData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="department" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="assigned" fill="#3b82f6" name="Assigned" />
+              <Bar dataKey="inProgress" fill="#f59e42" name="In Progress" />
+              <Bar dataKey="resolved" fill="#10b981" name="Resolved" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

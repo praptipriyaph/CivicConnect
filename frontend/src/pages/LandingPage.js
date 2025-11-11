@@ -1,5 +1,4 @@
 import React from 'react';
-// Removed Link import as buttons now trigger a function prop
 import {
   Building,
   Plus,
@@ -10,12 +9,10 @@ import {
   MapPin as MapPinIcon
 } from 'lucide-react';
 
-// Added onNavigate prop back
 const LandingPage = ({ onNavigate }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
 
-      {/* Hero Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -28,7 +25,6 @@ const LandingPage = ({ onNavigate }) => {
               Your complaints reach the right authorities instantly.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {/* Changed back to button, using onNavigate */}
               <button
                 onClick={() => onNavigate('/complaint-form')} // Pass target path
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 transition-all transform hover:scale-105"
@@ -36,7 +32,6 @@ const LandingPage = ({ onNavigate }) => {
                 <Plus className="w-5 h-5" />
                 <span>Report an Issue</span>
               </button>
-              {/* Changed back to button, using onNavigate */}
               <button
                 onClick={() => onNavigate('/track-complaint')} // Pass target path
                 className="bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 px-8 py-4 rounded-lg font-semibold text-lg flex items-center justify-center space-x-2 transition-all transform hover:scale-105"
@@ -47,7 +42,6 @@ const LandingPage = ({ onNavigate }) => {
             </div>
           </div>
 
-          {/* Statistics */}
           <div className="bg-white rounded-xl p-8 shadow-lg">
             <h3 className="text-2xl font-bold text-center mb-8">Our Impact</h3>
             <div className="grid md:grid-cols-4 gap-6">
@@ -72,7 +66,6 @@ const LandingPage = ({ onNavigate }) => {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8">
@@ -92,12 +85,10 @@ const LandingPage = ({ onNavigate }) => {
             <div>
               <h4 className="font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-gray-400">
-                 {/* Changed back to buttons using onNavigate */}
                 <li><button onClick={() => onNavigate('/complaint-form')} className="hover:text-white text-left">Report Issue</button></li>
                 <li><button onClick={() => onNavigate('/track-complaint')} className="hover:text-white text-left">Track Status</button></li>
                 <li><button className="hover:text-white text-left">FAQ</button></li> {/* Assuming not a route */}
                 <li><button className="hover:text-white text-left">Guidelines</button></li> {/* Assuming not a route */}
-                {/* Ensure no admin login button/link here */}
               </ul>
             </div>
 

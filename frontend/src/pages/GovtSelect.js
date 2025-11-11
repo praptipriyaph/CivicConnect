@@ -12,7 +12,6 @@ const GovtSelect = () => {
   const queryClient = useQueryClient();
 
 
-// Fetch departments
 useQuery({
   queryKey: ['departments'],
   queryFn: api.getDepartments,

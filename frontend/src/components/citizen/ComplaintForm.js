@@ -34,7 +34,6 @@ const ComplaintForm = () => {
     onSuccess: (complaint) => {
       toast.success("Complaint submitted successfully!");
       queryClient.invalidateQueries({ queryKey: ['citizenComplaints'] });
-      // Cleanup
       formData.evidence.forEach((e) => e.preview && URL.revokeObjectURL(e.preview));
       setFormData(initialFormState);
       navigate("/track-complaint", {
@@ -149,12 +148,12 @@ const ComplaintForm = () => {
       }
 
       const complaintData = {
-        title: formData.title || formData.issueCategory, // fallback title
+        title: formData.title || formData.issueCategory, 
         description: formData.description,
         latitude: formData.latitude,
         longitude: formData.longitude,
         image: imageUrl,
-        tag: formData.issueCategory, // ✅ guaranteed non-null
+        tag: formData.issueCategory, 
       };
 
       console.log("Submitting complaint payload:", complaintData);
@@ -184,7 +183,6 @@ const ComplaintForm = () => {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Title <span className="text-red-500">*</span>
@@ -198,7 +196,6 @@ const ComplaintForm = () => {
             />
           </div>
 
-          {/* Category */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Issue Category <span className="text-red-500">*</span>
@@ -218,7 +215,6 @@ const ComplaintForm = () => {
               </select>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Description <span className="text-red-500">*</span>
@@ -233,15 +229,13 @@ const ComplaintForm = () => {
             />
           </div>
 
-          {/* Location */}
-          <LocationPicker
+          <LocationPicker className="z-0"
             latitude={formData.latitude}
             longitude={formData.longitude}
             onLocationChange={handleLocationChange}
             error={errors.location}
           />
 
-          {/* Evidence */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Upload Image Evidence <span className="text-red-500">*</span>
@@ -275,7 +269,6 @@ const ComplaintForm = () => {
             </div>
           </div>
 
-          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
@@ -288,7 +281,7 @@ const ComplaintForm = () => {
 
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center z-[9999]"
           onClick={() => setSelectedImage(null)}
         >
           <div className="relative" onClick={(e) => e.stopPropagation()}>
@@ -301,7 +294,7 @@ const ComplaintForm = () => {
             <img
               src={selectedImage}
               alt="Full Preview"
-              className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl"
+              className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl z-[]"
             />
           </div>
         </div>

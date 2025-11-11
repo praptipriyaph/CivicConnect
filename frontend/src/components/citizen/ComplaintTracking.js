@@ -27,21 +27,16 @@ const ComplaintTracking = () => {
     queryFn: apiService.getCitizenComplaints
   });
 
-  // Filters and sorting
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [dateOrder, setDateOrder] = useState("desc");
 
-  // For previous complaints sorting/filtering
   const [prevCategory, setPrevCategory] = useState("all");
   const [prevDateOrder, setPrevDateOrder] = useState("desc");
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  // ✅ Fetch complaints handled by React Query
-
-  // Split active and closed complaints
   const activeComplaints = complaints.filter(
     (c) => c.status?.toLowerCase() !== COMPLAINT_STATUS.CLOSED.toLowerCase()
   );
@@ -49,7 +44,6 @@ const ComplaintTracking = () => {
     (c) => c.status?.toLowerCase() === COMPLAINT_STATUS.CLOSED.toLowerCase()
   );
 
-  // ✅ Active complaints filtering + sorting
   const filteredAndSortedActive = useMemo(() => {
     let result = [...activeComplaints];
 
@@ -74,7 +68,6 @@ const ComplaintTracking = () => {
     return result;
   }, [activeComplaints, selectedCategory, selectedStatus, dateOrder]);
 
-  // ✅ Previous complaints filtering + sorting
   const filteredAndSortedPrevious = useMemo(() => {
     let result = [...previousComplaints];
 
@@ -93,14 +86,12 @@ const ComplaintTracking = () => {
     return result;
   }, [previousComplaints, prevCategory, prevDateOrder]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredAndSortedActive.length / itemsPerPage);
   const paginatedActive = filteredAndSortedActive.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Helpers
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";
     const parsed = new Date(dateStr);
@@ -117,7 +108,6 @@ const ComplaintTracking = () => {
     return "Location not provided";
   };
 
-  // Loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -128,8 +118,6 @@ const ComplaintTracking = () => {
       </div>
     );
   }
-
-  // Error
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -148,7 +136,6 @@ const ComplaintTracking = () => {
 
   return (
     <div className="relative flex flex-col items-center p-6 bg-gray-50 min-h-screen">
-      {/* Back Button */}
       <button
         onClick={() => navigate("/")}
         className="sticky top-24 left-8 self-start bg-white shadow-md rounded-full p-2 hover:bg-blue-50 transition z-50"
@@ -156,14 +143,12 @@ const ComplaintTracking = () => {
         <ArrowLeft className="w-6 h-6 text-gray-700" />
       </button>
 
-      {/* ================= ACTIVE COMPLAINTS ================= */}
       <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-5xl mb-10">
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
             <Filter className="w-5 h-5 text-blue-600" /> Active Complaints
           </h2>
 
-          {/* Filters */}
           <div className="flex gap-3 flex-wrap mt-3 md:mt-0">
             <select
               value={selectedCategory}
@@ -211,7 +196,6 @@ const ComplaintTracking = () => {
           </div>
         </div>
 
-        {/* Complaint List */}
         {paginatedActive.length === 0 ? (
           <p className="text-gray-500 text-center py-6">
             No active complaints found.
@@ -222,7 +206,6 @@ const ComplaintTracking = () => {
           ))
         )}
 
-        {/* Pagination */}
         {filteredAndSortedActive.length > itemsPerPage && (
           <Pagination
             currentPage={currentPage}
@@ -232,7 +215,6 @@ const ComplaintTracking = () => {
         )}
       </div>
 
-      {/* ================= PREVIOUS COMPLAINTS ================= */}
       <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-5xl">
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
@@ -299,7 +281,6 @@ const ComplaintTracking = () => {
   );
 };
 
-// 🧩 Reusable components
 const ComplaintCard = ({ c, navigate }) => (
   <div className="border border-gray-200 rounded-lg p-4 mb-4 hover:shadow transition">
     <div className="flex justify-between items-start">

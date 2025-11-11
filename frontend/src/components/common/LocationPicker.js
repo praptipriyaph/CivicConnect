@@ -1,123 +1,189 @@
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
-import { MapPin, Crosshair } from 'lucide-react';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-function LocationMarker({ position, setPosition }) {
-  useMapEvents({
-    click(e) {
-      setPosition(e.latlng);
-    },
-  });
+const defaultIcon = L.icon({
+  iconUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  shadowUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
 
-  return position === null ? null : <Marker position={position} />;
-}
-
-function MapUpdater({ position }) {
+function FlyToLocation({ position }) {
   const map = useMap();
-  
   useEffect(() => {
     if (position) {
-      map.flyTo([position.lat, position.lng], 15, {
-        duration: 1.5
-      });
+      map.setView(position, Math.max(map.getZoom(), 14), { animate: true });
     }
   }, [position, map]);
-
   return null;
 }
 
-const LocationPicker = ({ latitude, longitude, onLocationChange, error }) => {
+const LocationPicker = ({ latitude, longitude, onLocationChange, error, className }) => {
   const [position, setPosition] = useState(
-    latitude && longitude ? { lat: latitude, lng: longitude } : null
+    latitude != null && longitude != null ? [latitude, longitude] : null
   );
-  const [locating, setLocating] = useState(false);
+  const [query, setQuery] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const searchTimeout = useRef(null);
 
-  const handlePositionChange = (latlng) => {
-    setPosition(latlng);
-    onLocationChange(latlng.lat, latlng.lng);
-  };
-
-  const getCurrentLocation = () => {
-    if ("geolocation" in navigator) {
-      setLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          const newPos = { lat: latitude, lng: longitude };
-          handlePositionChange(newPos);
-          setLocating(false);
-          toast.success("Location detected!", { id: "geolocation" });
-        },
-        (error) => {
-          setLocating(false);
-          toast.error("Could not get your location. Please select on map.", {
-            id: "geolocation-error",
-          });
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
-        }
-      );
-    } else {
-      toast.error("Geolocation not supported by your browser");
+  useEffect(() => {
+    if (latitude != null && longitude != null) {
+      setPosition([latitude, longitude]);
     }
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    if (!query) {
+      setSuggestions([]);
+      return;
+    }
+    setLoadingSearch(true);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(async () => {
+      try {
+        const q = encodeURIComponent(query);
+        const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=6`;
+        const res = await fetch(url, {
+          headers: { "Accept-Language": "en-US", "User-Agent": "CivicConnect/1.0" },
+        });
+        const data = await res.json();
+        setSuggestions(
+          (data || []).map((d) => ({
+            display_name: d.display_name,
+            lat: parseFloat(d.lat),
+            lon: parseFloat(d.lon),
+            type: d.type,
+          }))
+        );
+      } catch (e) {
+        setSuggestions([]);
+      } finally {
+        setLoadingSearch(false);
+      }
+    }, 350);
+    return () => clearTimeout(searchTimeout.current);
+  }, [query]);
+
+  const selectSuggestion = (s) => {
+    const pos = [s.lat, s.lon];
+    setPosition(pos);
+    setSuggestions([]);
+    setQuery(s.display_name);
+    if (onLocationChange) onLocationChange(s.lat, s.lon);
   };
 
-  // Default center - India
-  const defaultCenter = [20.5937, 78.9629];
-  const center = position ? [position.lat, position.lng] : defaultCenter;
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation not available in this browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude: lat, longitude: lon } = pos.coords;
+        const p = [lat, lon];
+        setPosition(p);
+        if (onLocationChange) onLocationChange(lat, lon);
+      },
+      (err) => {
+        alert("Unable to retrieve your location.");
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
+  const onMarkerDragEnd = (e) => {
+    const marker = e.target;
+    const latlng = marker.getLatLng();
+    const lat = latlng.lat;
+    const lon = latlng.lng;
+    setPosition([lat, lon]);
+    if (onLocationChange) onLocationChange(lat, lon);
+  };
+
+  const clearSelection = () => {
+    setPosition(null);
+    setQuery("");
+    setSuggestions([]);
+    if (onLocationChange) onLocationChange(null, null);
+  };
+
+  const mapCenter = position || [20.5937, 78.9629]; 
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-2">
-        <label className="block text-sm font-medium text-gray-700">
-          Location <span className="text-red-500">*</span>
-        </label>
-        <button
-          type="button"
-          onClick={getCurrentLocation}
-          disabled={locating}
-          className="bg-green-600 text-white text-xs px-3 py-1 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
-        >
-          <Crosshair className="w-3 h-3" />
-          <span>{locating ? "Detecting..." : "Use My Location"}</span>
-        </button>
-      </div>
-      
-      <p className="text-xs text-gray-500 mb-2">
-        Click on the map to select the exact location of the issue
-      </p>
-      
-      <div className={`rounded-lg overflow-hidden border-2 ${error ? 'border-red-500' : 'border-gray-300'}`}>
-        <MapContainer
-          center={center}
-          zoom={position ? 15 : 5}
-          style={{ height: '300px', width: '100%' }}
-          scrollWheelZoom={true}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    <div className={className}>
+      <div className="mb-2">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search place name (e.g. City Hall, Main Street)"
+            className="flex-1 border rounded-md p-2"
           />
-          <MapUpdater position={position} />
-          <LocationMarker position={position} setPosition={handlePositionChange} />
-        </MapContainer>
+          <button
+            type="button"
+            onClick={useCurrentLocation}
+            className="bg-blue-600 text-white px-3 rounded-md"
+          >
+            Use current
+          </button>
+          <button
+            type="button"
+            onClick={clearSelection}
+            className="bg-gray-200 text-gray-800 px-3 rounded-md"
+          >
+            Clear
+          </button>
+        </div>
+        {loadingSearch && <div className="text-sm text-gray-500 mt-1">Searching…</div>}
+        {suggestions.length > 0 && (
+          <ul className="bg-white border rounded mt-2 max-h-40 overflow-auto z-50">
+            {suggestions.map((s, idx) => (
+              <li
+                key={`${s.lat}-${s.lon}-${idx}`}
+                onClick={() => selectSuggestion(s)}
+                className="p-2 hover:bg-gray-100 cursor-pointer text-sm"
+              >
+                {s.display_name}
+              </li>
+            ))}
+          </ul>
+        )}
+        {error && <div className="text-sm text-red-600 mt-1">{error}</div>}
       </div>
 
-      {position && (
-        <div className="mt-2 text-xs text-gray-600 bg-green-50 p-2 rounded flex items-center">
-          <Crosshair className="w-3 h-3 inline mr-1 text-green-600" />
-          <span className="font-medium">Selected Location:</span>
-          <span className="ml-1">{position.lat.toFixed(6)}, {position.lng.toFixed(6)}</span>
-        </div>
-      )}
-      
-      {error && (
-        <p className="text-red-500 text-sm mt-1">{error}</p>
-      )}
+      <div style={{ height: 320 }} className="rounded overflow-hidden">
+        <MapContainer center={mapCenter} zoom={position ? 14 : 5} style={{ height: "100%" }}>
+          <TileLayer
+            attribution='&copy; OpenStreetMap contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <FlyToLocation position={position} />
+          {position && (
+            <>
+              <Marker
+                position={position}
+                icon={defaultIcon}
+                draggable={true}
+                eventHandlers={{ dragend: onMarkerDragEnd }}
+              >
+                <Popup>
+                  Selected location
+                  <div className="text-xs mt-1">Lat: {position[0].toFixed(6)} Lon: {position[1].toFixed(6)}</div>
+                </Popup>
+              </Marker>
+              <Circle center={position} radius={30} pathOptions={{ color: "blue", fillOpacity: 0.1 }} />
+            </>
+          )}
+        </MapContainer>
+      </div>
     </div>
   );
 };

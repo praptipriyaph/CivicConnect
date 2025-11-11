@@ -25,7 +25,6 @@ const PreviousComplaints = () => {
     queryFn: apiService.getCitizenComplaints
   });
 
-  // ✅ Filter only closed
   const closedComplaints = useMemo(() => {
     return allComplaints.filter(
       (c) =>
@@ -34,13 +33,11 @@ const PreviousComplaints = () => {
     );
   }, [allComplaints]);
 
-  // Pagination + filters
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [dateOrder, setDateOrder] = useState("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
-  // ✅ Unified location resolver
   const resolveLocationText = (c) => {
     if (!c) return "Location not provided";
     if (c.latitude && c.longitude)
@@ -52,7 +49,6 @@ const PreviousComplaints = () => {
     return "Location not provided";
   };
 
-  // ✅ Format date safely
   const formatDate = (dateStr) => {
     if (!dateStr) return "N/A";
     const parsed = new Date(dateStr);
@@ -63,7 +59,6 @@ const PreviousComplaints = () => {
     });
   };
 
-  // ✅ Filter + sort
   const filteredAndSorted = useMemo(() => {
     let result = [...closedComplaints];
 
@@ -86,14 +81,12 @@ const PreviousComplaints = () => {
     return result;
   }, [closedComplaints, selectedCategory, dateOrder]);
 
-  // ✅ Pagination
   const paginated = filteredAndSorted.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
 
-  // ✅ Loading + Error states
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -124,7 +117,6 @@ const PreviousComplaints = () => {
   return (
     <div className="flex flex-col items-center p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-5xl mb-8">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6">
           <div className="flex items-center gap-3">
             <button
@@ -138,7 +130,6 @@ const PreviousComplaints = () => {
             </h2>
           </div>
 
-          {/* Filters */}
           <div className="flex gap-3 items-center flex-wrap mt-3 md:mt-0">
             <select
               value={selectedCategory}
@@ -172,7 +163,6 @@ const PreviousComplaints = () => {
           </div>
         </div>
 
-        {/* Complaint List */}
         {paginated.length === 0 ? (
           <p className="text-gray-500 text-center py-6">
             No previous complaints found.
@@ -212,7 +202,7 @@ const PreviousComplaints = () => {
               </div>
 
               <p className="text-xs text-gray-400 mt-1 capitalize">
-                Category: {c.category || "N/A"}
+                Category: {c.tag || "N/A"}
               </p>
 
               <div className="mt-2 text-blue-600 text-xs font-medium hover:underline">
@@ -222,7 +212,6 @@ const PreviousComplaints = () => {
           ))
         )}
 
-        {/* Pagination */}
         {filteredAndSorted.length > itemsPerPage && (
           <div className="flex justify-center items-center space-x-3 mt-4">
             <button

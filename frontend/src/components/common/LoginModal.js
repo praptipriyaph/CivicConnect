@@ -16,28 +16,24 @@ const LoginModal = ({ isOpen, onClose, onLogin, purpose }) => {
 
   const getLoginTitle = () => {
     switch (purpose) {
-      // Keep existing titles or adjust as needed
-      case '/complaint-form': // Updated purpose to match path
+      case '/complaint-form': 
       case 'complaint-form': return 'Login to Report Issue';
-      case '/track-complaint': // Updated purpose to match path
+      case '/track-complaint': 
       case 'track-complaint': return 'Login to Track Complaints';
-      case 'admin-login': return 'Official Login'; // This is for the dedicated /admin-login route
+      case 'admin-login': return 'Official Login'; 
       case 'profile': return 'Login to View Profile';
-      case 'notifications': return 'Login to View Notifications';
       default: return 'Login Required';
     }
   };
 
   const getLoginDescription = () => {
      switch (purpose) {
-       // Keep existing descriptions or adjust as needed
       case '/complaint-form':
       case 'complaint-form': return 'Please login to submit your complaint';
       case '/track-complaint':
       case 'track-complaint': return 'Please login to track your complaints';
-      case 'admin-login': return 'For government officials and administrators'; // Correct for /admin-login route
+      case 'admin-login': return 'For government officials and administrators'; 
       case 'profile': return 'Please login to view your profile';
-      case 'notifications': return 'Please login to view notifications';
       default: return 'Please select your role to continue';
     }
   };
@@ -62,7 +58,6 @@ const LoginModal = ({ isOpen, onClose, onLogin, purpose }) => {
           </div>
 
           <div className="space-y-4">
-            {/* Show Citizen button only if purpose is NOT admin-login */}
             {purpose !== 'admin-login' && (
               <button
                 onClick={() => handleRoleSelect('citizen')}
@@ -73,7 +68,6 @@ const LoginModal = ({ isOpen, onClose, onLogin, purpose }) => {
               </button>
             )}
 
-            {/* Show Admin and Government buttons ONLY if purpose IS admin-login */}
             {purpose === 'admin-login' && (
               <>
                 <button
@@ -95,18 +89,16 @@ const LoginModal = ({ isOpen, onClose, onLogin, purpose }) => {
             )}
           </div>
 
-          {/* Show the "Official Login" shortcut only if purpose is NOT admin-login */}
           {purpose !== 'admin-login' && (
             <div className="mt-6 pt-6 border-t">
               <p className="text-sm text-gray-600 text-center mb-4">
                 Are you a government official?
               </p>
-              {/* MODIFIED: This button now directly logs in as government */}
               <button
-                onClick={() => handleRoleSelect('government')} // Directly select government role
+                onClick={() => handleRoleSelect('government')} 
                 className="w-full text-purple-600 hover:text-purple-700 font-medium flex items-center justify-center space-x-1" // Added flex for icon
               >
-                 <Building className="w-4 h-4 mr-1" /> {/* Added icon */}
+                 <Building className="w-4 h-4 mr-1" /> 
                  <span>Login as Government Official</span>
               </button>
             </div>

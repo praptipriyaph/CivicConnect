@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import AdminScrutinyDashboard from "../components/admin/AdminScrutinyDashboard";
 import AnalyticsReports from "../components/admin/AnalyticsReports";
-import UserManagement from "../components/admin/UserManagement";
 import { COMPLAINT_STATUS } from "../utils/constants";
 
 const AdminPortal = ({ complaints = [], onUpdateComplaint, user }) => {
@@ -30,7 +29,6 @@ const AdminPortal = ({ complaints = [], onUpdateComplaint, user }) => {
 
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Sidebar */}
       <aside className="w-64 bg-blue-700 text-white flex flex-col shadow-lg">
         <div className="p-5 border-b border-blue-600">
           <h1 className="text-lg font-semibold tracking-wide">
@@ -68,7 +66,7 @@ const AdminPortal = ({ complaints = [], onUpdateComplaint, user }) => {
             <BarChart2 className="w-5 h-5 mr-3" />
             Analytics
           </button>
-          <button
+          {/* <button
             onClick={() => setActiveTab("users")}
             className={`flex items-center w-full text-left px-5 py-3 ${
               activeTab === "users"
@@ -78,17 +76,15 @@ const AdminPortal = ({ complaints = [], onUpdateComplaint, user }) => {
           >
             <Users className="w-5 h-5 mr-3" />
             User Management
-          </button>
+          </button> */}
         </nav>
       </aside>
 
-      {/* Main Content */}
       <main
         className={`flex-1 p-8 transition-all duration-700 ease-out transform ${
           slideIn ? "translate-x-0 opacity-100" : "-translate-x-10 opacity-0"
         }`}
       >
-        {/* Header */}
         <div className="flex justify-between items-center mb-8 border-b border-gray-200 pb-4">
           <div>
             <h1 className="text-2xl font-semibold text-gray-800">
@@ -96,7 +92,7 @@ const AdminPortal = ({ complaints = [], onUpdateComplaint, user }) => {
                 ? "Grievance Scrutiny"
                 : activeTab === "analytics"
                 ? "Analytics & Reports"
-                : "User Management"}
+                : "Grievance Scrutiny"}
             </h1>
             <p className="text-gray-500 text-sm">
               {activeTab === "dashboard"
@@ -109,7 +105,6 @@ const AdminPortal = ({ complaints = [], onUpdateComplaint, user }) => {
           
         </div>
 
-        {/* Content */}
         {activeTab === "dashboard" && (
           <AdminScrutinyDashboard
             complaints={relevantComplaints}
@@ -120,7 +115,6 @@ const AdminPortal = ({ complaints = [], onUpdateComplaint, user }) => {
         {activeTab === "analytics" && (
           <AnalyticsReports complaints={complaints} />
         )}
-        {activeTab === "users" && <UserManagement />}
       </main>
     </div>
   );

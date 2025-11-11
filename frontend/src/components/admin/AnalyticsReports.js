@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   BarChart,
   Bar,
@@ -9,30 +9,52 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from 'recharts';
+import { useApiService } from '../../services/api';
+import { useQuery } from '@tanstack/react-query';
 
 const AnalyticsReports = () => {
-  // Dummy complaint data
-  const complaints = [
-    { category: 'Roads', status: 'Resolved' },
-    { category: 'Roads', status: 'Pending' },
-    { category: 'Roads', status: 'Resolved' },
-    { category: 'Sanitation', status: 'Resolved' },
-    { category: 'Sanitation', status: 'Resolved' },
-    { category: 'Sanitation', status: 'Pending' },
-    { category: 'Utilities', status: 'Resolved' },
-    { category: 'Utilities', status: 'Pending' },
-    { category: 'Utilities', status: 'Pending' },
-  ];
-
-  // Compute totals
-  const categories = ['Roads', 'Sanitation', 'Utilities'];
-  const data = categories.map(category => {
-    const total = complaints.filter(c => c.category === category).length;
-    const resolved = complaints.filter(
-      c => c.category === category && c.status === 'Resolved'
-    ).length;
-    return { category, total, resolved };
+  const apiService = useApiService();
+  const { data: complaints = [], isLoading, error } = useQuery({
+    queryKey: ['allComplaints'],
+    queryFn: apiService.getAllComplaints,
   });
+
+  const resolved = complaints.filter(c => ['resolved','closed'].includes(c.status?.toLowerCase())).length;
+  const totalPending = complaints.filter(c => !['resolved','closed'].includes(c.status?.toLowerCase())).length;
+
+  const categories = useMemo(() => {
+    const cats = new Set();
+    complaints.forEach(c => {
+      if (c.tag) cats.add(c.tag);
+    });
+    return Array.from(cats);
+  }, [complaints]);
+
+  const data = useMemo(() => {
+    return categories.map(category => {
+      const total = complaints.filter(c => c.tag === category).length;
+      const resolved = complaints.filter(
+        c => c.tag === category && ['resolved','closed'].includes(c.status?.toLowerCase())
+      ).length;
+      return { category, total, resolved };
+    });
+  }, [categories, complaints]);
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-6 text-center">
+        <p className="text-gray-600">Loading analytics...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-6 text-center">
+        <p className="text-red-600">Failed to load analytics.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-md p-6">
@@ -40,7 +62,6 @@ const AnalyticsReports = () => {
         Analytics & Reports
       </h2>
 
-      {/* Bar Chart Section */}
       <div className="p-4 border border-gray-200 rounded-lg mb-6">
         <h3 className="font-medium mb-3 text-gray-700">
           Total vs Resolved Complaints (by Category)
@@ -60,7 +81,6 @@ const AnalyticsReports = () => {
         </div>
       </div>
 
-      {/* Summary Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-4 border border-gray-200 rounded-lg">
           <h3 className="font-medium mb-3 text-gray-700">
@@ -68,7 +88,7 @@ const AnalyticsReports = () => {
           </h3>
           <div className="space-y-3">
             {data.map(({ category, total, resolved }) => {
-              const percentage = (resolved / total) * 100;
+              const percentage = total === 0 ? 0 : (resolved / total) * 100;
               return (
                 <div key={category}>
                   <div className="flex justify-between text-sm font-medium">
@@ -94,11 +114,9 @@ const AnalyticsReports = () => {
             Resolution Overview
           </h3>
           <p className="text-3xl font-semibold text-green-600 mb-2">
-            {(
-              (complaints.filter(c => c.status === 'Resolved').length /
-                complaints.length) *
-              100
-            ).toFixed(1)}
+            {complaints.length === 0
+              ? "0.0"
+              : ((resolved / complaints.length) * 100).toFixed(1)}
             %
           </p>
           <p className="text-sm text-gray-500 mb-4">
@@ -111,15 +129,11 @@ const AnalyticsReports = () => {
             </div>
             <div className="flex justify-between">
               <span>Resolved</span>
-              <span>
-                {complaints.filter(c => c.status === 'Resolved').length}
-              </span>
+              <span>{resolved}</span>
             </div>
             <div className="flex justify-between">
               <span>Pending</span>
-              <span>
-                {complaints.filter(c => c.status === 'Pending').length}
-              </span>
+              <span>{totalPending}</span>
             </div>
           </div>
         </div>

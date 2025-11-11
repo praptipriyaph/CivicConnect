@@ -16,7 +16,6 @@ app.use(express.json());
 
 const supabase=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_KEY)
 
-// Configure multer for file uploads
 const upload = multer({ 
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
@@ -27,11 +26,10 @@ const upload = multer({
       cb(new Error('Only image files allowed'));
     }
   }
-});
+}); 
 
 app.use(clerkMiddleware());
 
-// Helper function to get clerk_id and username from authenticated request
 async function getUserFromAuth(req) {
   const {userId: clerk_id} = getAuth(req);
   const {username} = await clerkClient.users.getUser(clerk_id);
@@ -60,21 +58,13 @@ app.post("/api/save-user",requireAuth(),async (req, res) => {
     const exists = await supabase.from("users").select("*").eq("clerk_id",user.clerk_id).maybeSingle();
     
     if(!exists.data){
-      // User doesn't exist - create new user
-      const { data, error } = await supabase
-        .from("users")
-        .insert([user])
-        .select("*")
-        .single();
-      
+      const { data, error } = await supabase.from("users").insert([user]).select("*").single();
       if (error) {
         console.error("Error inserting user:", error);
         throw error;
       }
-      
       console.log("USER ADDED! Returning isNewUser: true");
       console.log("User data:", data);
-      
       return res.status(201).json({ 
         isNewUser: true, 
         data: data,
@@ -82,13 +72,7 @@ app.post("/api/save-user",requireAuth(),async (req, res) => {
       });
     }
     else{
-      // User already exists
-      console.log("USER EXISTS! Returning isNewUser: false");
-      return res.status(200).json({ 
-        isNewUser: false, 
-        message: "User Already Exists!", 
-        data: exists.data 
-      });
+      return res.status(200).json({ isNewUser: false, message: "User Already Exists!", data: exists.data});
     }
   } catch (err) {
     console.error("Error in save-user endpoint:", err);
@@ -96,24 +80,11 @@ app.post("/api/save-user",requireAuth(),async (req, res) => {
   }
 });
 
-// Update user role
 app.patch("/api/update-user-role", requireAuth(), async (req, res) => {
   try {
     const {userId: clerk_id} = getAuth(req);
     const {role} = req.body;
-    
-    // Validate role
-    const validRoles = ['citizen', 'admin', 'official'];
-    if (!validRoles.includes(role)) {
-      return res.status(400).json({ error: "Invalid role. Must be: citizen, admin, or official" });
-    }
-    
-    const {data, error} = await supabase
-      .from("users")
-      .update({ role })
-      .eq("clerk_id", clerk_id)
-      .select()
-      .single();
+    const {data, error} = await supabase.from("users").update({ role }).eq("clerk_id", clerk_id).select().single();
     
     if (error) throw error;
     
@@ -125,7 +96,6 @@ app.patch("/api/update-user-role", requireAuth(), async (req, res) => {
   }
 });
 
-// Image upload endpoint
 app.post("/api/upload-image", requireAuth(), upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
@@ -137,13 +107,7 @@ app.post("/api/upload-image", requireAuth(), upload.single('image'), async (req,
     const fileName = `${userId}-${Date.now()}.${fileExt}`;
     const filePath = `complaints/${fileName}`;
 
-    const { data, error } = await supabase.storage
-      .from('complaint_images')
-      .upload(filePath, req.file.buffer, {
-        contentType: req.file.mimetype,
-        cacheControl: '3600',
-        upsert: false
-      });
+    const { data, error } = await supabase.storage.from('complaint_images').upload(filePath, req.file.buffer, {contentType: req.file.mimetype,cacheControl: '3600',upsert: false});
 
     if (error) throw error;
 
@@ -160,10 +124,7 @@ app.post("/api/upload-image", requireAuth(), upload.single('image'), async (req,
 
 app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
   try{
-    // Get clerk_id and username from authenticated token
-    const {clerk_id, username} = await getUserFromAuth(req);
-    
-    // Ensure user exists to satisfy FK constraint (complaints.created_by -> users.clerk_id)
+    const {clerk_id, username} = await getUserFromAuth(req);    
     const { data: existingUser, error: existingUserError } = await supabase
       .from("users")
       .select("clerk_id")
@@ -176,8 +137,6 @@ app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
         .insert([{ clerk_id, username, role: "citizen" }]);
       if (insertUserError) throw insertUserError;
     }
-    
-    // Extract complaint data from request body (no user_id needed)
     const {title, description, latitude, longitude, image, tag} = req.body;
     console.log(req.body)
     console.log("clerk",clerk_id)
@@ -188,7 +147,6 @@ app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
       longitude,
       image,
       created_by: clerk_id, 
-       // Store clerk_id as TEXT
       tag
     }]).select("*").single()
     
@@ -211,7 +169,6 @@ app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
 app.get("/api/get-citizen-complaints",requireAuth(),async (req,res)=>{
   try{
     const {userId:clerk_id} = getAuth(req)
-    // Query directly with clerk_id (no user table lookup needed)
     const {data,error} = await supabase.from("complaints").select("*").eq("created_by", clerk_id);
     if(error)throw error
     res.status(200).json(data)
@@ -235,17 +192,32 @@ app.get("/api/get-admin-complaints",requireAuth(),async (req,res)=>{
 })
 
 
-//for both open->assigned and reopened->assigned , basically does recheck for admin too
 app.patch("/api/admin-update-complaint",requireAuth(),async (req,res)=>{
   try{
     const {userId:clerk_id} = getAuth(req)
     const {username} = await clerkClient.users.getUser(clerk_id);
-    console.log("username",username)
-    // assignee_clerk_id is the clerk_id of the government official being assigned
     const {complaint_id, description} = req.body;
-    
-    const department_name=description.split(" ")[2]
-    const {data:department}=await supabase.from("departments").select("department_id").eq("name",department_name).single();
+    const { data: complaint, error: complaintError } = await supabase
+      .from("complaints")
+      .select("tag")
+      .eq("complaint_id", complaint_id)
+      .single();
+
+    if (complaintError) throw complaintError;
+    if (!complaint || !complaint.tag) {
+      throw new Error("Complaint not found or missing tag/category.");
+    }
+
+    const { data: department, error: deptError } = await supabase
+      .from("departments")
+      .select("department_id")
+      .ilike("name", complaint.tag)
+      .single();
+
+    if (deptError) throw deptError;
+    if (!department) {
+      throw new Error(`Department not found for category: ${complaint.tag}`);
+    }
 
     const {data,error} = await supabase.from("complaints").update({
       assigned_to: department.department_id, 
@@ -273,8 +245,6 @@ app.patch("/api/citizen-recheck-complaint", requireAuth(), async (req, res) => {
   try {
     const { userId: clerk_id } = getAuth(req);
     const { complaint_id, description } = req.body;
-
-    // Step 1️⃣: Move complaint back to "open"
     const { data, error } = await supabase
       .from("complaints")
       .update({ status: "open" })
@@ -284,7 +254,6 @@ app.patch("/api/citizen-recheck-complaint", requireAuth(), async (req, res) => {
 
     if (error) throw error;
 
-    // Step 2️⃣: Log update with [Lodged] prefix — so it visually resets to the start
     const prefixedDesc = `[Lodged] ${description || "Complaint reopened by citizen for re-evaluation."}`;
 
     const { error: update_error } = await supabase.from("complaint_updates").insert([
@@ -302,14 +271,12 @@ app.patch("/api/citizen-recheck-complaint", requireAuth(), async (req, res) => {
       data,
     });
   } catch (error) {
-    console.error("❌ Citizen recheck error:", error);
+    console.error(error)
     res.status(500).json({ error: error.message });
   }
 });
 
-
-
-//used by both admin and citizen
+//for both citizn and admin
 app.post("/api/close-complaint", requireAuth(), async (req, res) => {
   try {
     const { userId: clerk_id } = getAuth(req);
@@ -417,8 +384,6 @@ app.post("/api/get-govt-department",requireAuth(),async (req,res)=>{
 app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
   try {
     const { userId: clerk_id } = getAuth(req);
-
-    // Step 1️⃣ Get user's department info
     const { data: user, error: userError } = await supabase
       .from("users")
       .select("department_id, role")
@@ -430,7 +395,6 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
     if (userError) throw userError;
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    // Step 2️⃣ Get department details
     const { data: department, error: deptError } = await supabase
       .from("departments")
       .select("department_id, name")
@@ -441,7 +405,6 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
 
     if (deptError) throw deptError;
 
-    // Step 3️⃣ Get complaints for that department
     const { data: complaints, error: complaintError } = await supabase
       .from("complaints")
       .select("*")
@@ -451,8 +414,6 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
       .order("created_at", { ascending: false });
 
     if (complaintError) throw complaintError;
-
-    // Step 4️⃣ Return the final combined response
 
     console.log("AWHODAHADWOH",department)
     console.log("COMPLAINTS",complaints)
@@ -469,19 +430,69 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
 });
 
 
+app.get("/api/get-all-complaints", requireAuth(), async (req, res) => {
+  try {
+    const { data, error } = await supabase.from("complaints").select("*").order("created_at",{ ascending:false });
+    if (error) throw error;
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error fetching all complaints:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// includes closed/resolved
+app.get("/api/get-govt-complaints-all", requireAuth(), async (req, res) => {
+  try {
+    const { userId: clerk_id } = getAuth(req);
+
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .select("department_id, role")
+      .eq("clerk_id", clerk_id)
+      .single();
+
+    if (userError) throw userError;
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const { data: department, error: deptError } = await supabase
+      .from("departments")
+      .select("department_id, name")
+      .eq("department_id", user.department_id)
+      .single();
+
+    if (deptError) throw deptError;
+
+    const { data: complaints, error: complaintError } = await supabase
+      .from("complaints")
+      .select("*")
+      .eq("assigned_to", user.department_id)
+      .order("status", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (complaintError) throw complaintError;
+
+    res.status(200).json({
+      department_id: user.department_id,
+      department_name: department?.name || null,
+      complaints: complaints || [],
+    });
+  } catch (error) {
+    console.error("Error fetching govt complaints (all):", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 app.patch("/api/govt-update-complaint", requireAuth(), async (req, res) => {
   try {
     const { userId: clerk_id } = getAuth(req);
     const { complaint_id, description, stage } = req.body;
 
-    // Determine new status
     let newStatus = null;
     if (stage === "In Progress") newStatus = "in_progress";
     else if (stage === "Resolved") newStatus = "resolved";
     else return res.status(400).json({ error: "Invalid stage transition" });
 
-    // Update complaint
     const { data, error } = await supabase
       .from("complaints")
       .update({ status: newStatus })
@@ -490,10 +501,8 @@ app.patch("/api/govt-update-complaint", requireAuth(), async (req, res) => {
       .single();
     if (error) throw error;
 
-    // 🔹 Prefix description for clarity
     const prefixedDesc = `[${stage}] ${description}`;
 
-    // Insert update
     const { error: updateError } = await supabase.from("complaint_updates").insert([
       {
         complaint_id,
@@ -505,18 +514,15 @@ app.patch("/api/govt-update-complaint", requireAuth(), async (req, res) => {
 
     res.status(200).json(data);
   } catch (error) {
-    console.error("❌ Govt update error:", error);
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
 
 
-
 app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {
   try {
     const { complaint_id } = req.body;
-
-    // 1️⃣ Get all updates
     const { data: updates, error: updatesError } = await supabase
       .from("complaint_updates")
       .select("*")
@@ -527,10 +533,8 @@ app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {
     if (!updates || updates.length === 0)
       return res.status(200).json([]);
 
-    // 2️⃣ Get all unique updaters
     const clerkIds = [...new Set(updates.map((u) => u.updated_by))];
 
-    // 3️⃣ Fetch user info (with department_id)
     const { data: users, error: usersError } = await supabase
       .from("users")
       .select("clerk_id, role, first_name, last_name, department_id")
@@ -538,14 +542,12 @@ app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {
 
     if (usersError) throw usersError;
 
-    // 4️⃣ Fetch department names (for officials only)
     const deptIds = [...new Set(users.map((u) => u.department_id).filter(Boolean))];
     const { data: departments } = await supabase
       .from("departments")
       .select("department_id, name")
       .in("department_id", deptIds);
 
-    // 5️⃣ Merge details
     const enrichedUpdates = updates.map((u) => {
       const user = users?.find((usr) => usr.clerk_id === u.updated_by);
       const fullName = user
@@ -562,7 +564,7 @@ app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {
         ...u,
         role: user?.role || "Unknown",
         name: fullName || "Unknown User",
-        department: deptLabel || null, // only for officials
+        department: deptLabel || null, 
       };
     });
 
@@ -574,6 +576,27 @@ app.post("/api/get-complaint-updates", requireAuth(), async (req, res) => {
 });
 
 
+app.get("/api/get-current-user", requireAuth(), async (req, res) => {
+  try {
+    const { userId: clerk_id } = getAuth(req);
+
+    const { data, error } = await supabase
+      .from("users")
+      .select("clerk_id, username, first_name, last_name, role, department_id")
+      .eq("clerk_id", clerk_id)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: "User not found in database" });
+    }
+    res.status(200).json(data);
+  } catch (err) {
+    console.error("Error fetching current user:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });

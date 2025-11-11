@@ -3,7 +3,6 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { MapPin } from 'lucide-react';
 import L from 'leaflet';
 
-// Fix for default marker icon in React
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -29,7 +28,7 @@ const LocationDisplay = ({ latitude, longitude, title }) => {
   }
 
   return (
-    <div>
+    <div className='z-0'>
       <div className="rounded-lg overflow-hidden border border-gray-300">
         <MapContainer
           center={[latitude, longitude]}

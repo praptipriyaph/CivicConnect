@@ -18,20 +18,21 @@ const departments = ["Roads", "Water", "Waste", "Electricity", "Health"];
 const AdminScrutinyDashboard = () => {
   const apiService = useApiService();
   const [sortOrder, setSortOrder] = useState("desc");
-  const [filterCategory, setFilterCategory] = useState("all"); // ✅ start as "all"
+  const [filterCategory, setFilterCategory] = useState("all"); 
   const [filterStatus, setFilterStatus] = useState("assigned");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
   const queryClient = useQueryClient();
 
-  // Format date safely
+  const [assigningId, setAssigningId] = useState(null);
+  const [closingId, setClosingId] = useState(null);
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "—";
     const d = new Date(dateStr);
     return isNaN(d.getTime()) ? "—" : d.toLocaleString();
   };
 
-  // ✅ Load complaints (use React Query's status instead of local loading/error)
   const { data, isLoading, error } = useQuery({
     queryKey: ['adminComplaints'],
     queryFn: apiService.getAdminComplaints,
@@ -48,7 +49,6 @@ const AdminScrutinyDashboard = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminComplaints'] })
   });
 
-  // ✅ Assign complaint
   const handleAssign = async (complaintId, dept) => {
     const selectedDept =
       dept || complaints.find((c) => c.complaint_id === complaintId)?.tag;
@@ -58,26 +58,32 @@ const AdminScrutinyDashboard = () => {
       return;
     }
 
+    if (assignMutation.isLoading) return;
+
     try {
+      setAssigningId(complaintId);
       await assignMutation.mutateAsync({
         complaint_id: complaintId,
-        description: `Assigned to ${selectedDept} department.`,
+        description: `[Assigned] Complaint assigned to department.`,
       });
 
       alert(`Complaint forwarded to ${selectedDept} successfully.`);
     } catch (error) {
       console.error("Error assigning complaint:", error);
       alert("Failed to forward complaint.");
+    } finally {
+      setAssigningId(null);
     }
   };
 
-  // ✅ Close complaint
   const handleClose = async (complaintId) => {
     const reason = prompt("Enter reason for closing this complaint:");
-    if (!reason || !reason.trim())
-      return alert("Closing reason cannot be empty.");
+    if (!reason || !reason.trim()) return alert("Closing reason cannot be empty.");
+
+    if (closeMutation.isLoading) return;
 
     try {
+      setClosingId(complaintId);
       await closeMutation.mutateAsync({
         complaint_id: complaintId,
         description: reason,
@@ -86,30 +92,28 @@ const AdminScrutinyDashboard = () => {
     } catch (error) {
       console.error("Error closing complaint:", error);
       alert("Failed to close complaint.");
+    } finally {
+      setClosingId(null);
     }
   };
 
-  // ✅ Filter + Sort
   const filteredAndSorted = useMemo(() => {
     if (!complaints || complaints.length === 0) return [];
 
     let result = [...complaints];
 
-    // Filter by category
     if (filterCategory && filterCategory !== "all") {
       result = result.filter(
         (c) => c.tag?.toLowerCase() === filterCategory.toLowerCase()
       );
     }
 
-    // Filter by status
     if (filterStatus && filterStatus !== "all") {
       result = result.filter(
         (c) => c.status?.toLowerCase() === filterStatus.toLowerCase()
       );
     }
 
-    // Sort
     result.sort((a, b) => {
       const dA = new Date(a.created_at || 0);
       const dB = new Date(b.created_at || 0);
@@ -119,7 +123,6 @@ const AdminScrutinyDashboard = () => {
     return result;
   }, [complaints, filterCategory, filterStatus, sortOrder]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
   const paginatedComplaints = filteredAndSorted.slice(
     (currentPage - 1) * itemsPerPage,
@@ -131,7 +134,6 @@ const AdminScrutinyDashboard = () => {
     return s === "open" || s === "reopened";
   });
 
-  // 🌀 Loading
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -143,7 +145,6 @@ const AdminScrutinyDashboard = () => {
     );
   }
 
-  // ❌ Error
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -160,10 +161,8 @@ const AdminScrutinyDashboard = () => {
     );
   }
 
-  // ✅ Render
   return (
     <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
@@ -189,7 +188,6 @@ const AdminScrutinyDashboard = () => {
         </div>
       </div>
 
-      {/* Open Complaints */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold mb-4">
           Open Complaints ({openComplaints.length})
@@ -248,6 +246,7 @@ const AdminScrutinyDashboard = () => {
                     id={`dept-${complaint.complaint_id}`}
                     className="flex-grow p-2 border border-gray-300 rounded-md bg-white text-sm focus:ring-2 focus:ring-green-500"
                     defaultValue={complaint.tag || ""}
+                    disabled={assigningId === complaint.complaint_id}
                   >
                     <option value="" disabled>
                       Choose a Category
@@ -266,15 +265,31 @@ const AdminScrutinyDashboard = () => {
                           .value
                       )
                     }
-                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm flex-shrink-0 mt-2 sm:mt-0"
+                    disabled={assigningId === complaint.complaint_id || assignMutation.isLoading}
+                    className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm flex-shrink-0 mt-2 sm:mt-0 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    Assign
+                    {(assigningId === complaint.complaint_id && assignMutation.isLoading) ? (
+                      <>
+                        <Loader className="w-4 h-4 mr-2 animate-spin" />
+                        Assigning...
+                      </>
+                    ) : (
+                      "Assign"
+                    )}
                   </button>
                   <button
                     onClick={() => handleClose(complaint.complaint_id)}
-                    className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm flex-shrink-0 mt-2 sm:mt-0"
+                    disabled={closingId === complaint.complaint_id || closeMutation.isLoading}
+                    className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm flex-shrink-0 mt-2 sm:mt-0 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    Close
+                    {(closingId === complaint.complaint_id && closeMutation.isLoading) ? (
+                      <>
+                        <Loader className="w-4 h-4 mr-2 animate-spin" />
+                        Closing...
+                      </>
+                    ) : (
+                      "Close"
+                    )}
                   </button>
                 </div>
               </div>
@@ -283,7 +298,6 @@ const AdminScrutinyDashboard = () => {
         </div>
       </div>
 
-      {/* Active Complaints */}
       <div className="bg-white rounded-lg shadow-md p-6 mt-8">
         <div className="flex flex-col md:flex-row justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
@@ -378,16 +392,15 @@ const AdminScrutinyDashboard = () => {
                 />
               )}
 
-              {complaint.assigned_to && (
+              {/* {complaint.assigned_to && (
                 <p className="text-xs text-gray-500 mt-1 italic">
                   Assigned To: {complaint.assigned_to}
                 </p>
-              )}
+              )} */}
             </div>
           ))
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center space-x-3 mt-4">
             <button

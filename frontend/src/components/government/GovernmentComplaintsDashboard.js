@@ -12,7 +12,6 @@ const GovernmentComplaintsDashboard = () => {
   const [updateData, setUpdateData] = useState({});
   const [updating, setUpdating] = useState(false);
 
-  /** Handle local field changes for remarks + stage */
   const handleFieldChange = (id, field, value) => {
     setUpdateData((prev) => ({
       ...prev,
@@ -20,7 +19,6 @@ const GovernmentComplaintsDashboard = () => {
     }));
   };
 
-  // Use React Query to fetch department + complaints (with updates)
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["govComplaints"],
     queryFn: async () => {
@@ -48,7 +46,6 @@ const GovernmentComplaintsDashboard = () => {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["govComplaints"] }),
   });
 
-  /** Determine valid next stages */
   const getNextStages = (status) => {
     switch (status?.toLowerCase()) {
       case "assigned":
@@ -60,7 +57,6 @@ const GovernmentComplaintsDashboard = () => {
     }
   };
 
-  /** Update complaint handler */
   const handleAddUpdate = async (complaintId, currentStatus) => {
     const { stage, remark } = updateData[complaintId] || {};
     if (!stage || !remark?.trim()) {
@@ -93,7 +89,6 @@ const GovernmentComplaintsDashboard = () => {
     }
   };
 
-  /** Categorize complaints */
   const categorized = useMemo(() => {
     const forwarded = [];
     const active = [];
@@ -109,7 +104,6 @@ const GovernmentComplaintsDashboard = () => {
     return { forwarded, active, closed };
   }, [complaints]);
 
-  /** Render individual complaint card */
   const renderComplaint = (c, allowUpdate = false) => {
     const currentStatus = c.status?.toLowerCase();
     const nextStages = getNextStages(currentStatus);
@@ -119,7 +113,6 @@ const GovernmentComplaintsDashboard = () => {
         key={c.complaint_id}
         className="bg-white border border-gray-200 shadow-sm rounded-lg p-6 mb-4"
       >
-        {/* Header */}
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-lg font-semibold text-gray-800">
             {c.title || "Untitled Complaint"}
@@ -129,12 +122,10 @@ const GovernmentComplaintsDashboard = () => {
           </span>
         </div>
 
-        {/* Description */}
         <p className="text-gray-600 text-sm mb-4">
           {c.description || "No description provided."}
         </p>
 
-        {/* Evidence Image */}
         {c.image && (
           <div className="mb-4">
             <h4 className="text-sm font-medium text-gray-700 mb-2">Evidence</h4>
@@ -158,7 +149,6 @@ const GovernmentComplaintsDashboard = () => {
           </div>
         )}
 
-        {/* Timeline */}
         <ol className="relative border-l border-blue-200 ml-4">
           {c.updates?.length ? (
             c.updates.map((u, i) => (
@@ -186,7 +176,6 @@ const GovernmentComplaintsDashboard = () => {
           )}
         </ol>
 
-        {/* Update Section */}
         {allowUpdate && nextStages.length > 0 && (
           <div className="mt-4 border-t pt-4">
             <h4 className="text-sm font-semibold text-gray-700 mb-2">
@@ -237,7 +226,6 @@ const GovernmentComplaintsDashboard = () => {
     );
   };
 
-  /** Pagination helper */
   const paginate = (arr, type) => {
     const totalPages = Math.ceil(arr.length / ITEMS_PER_PAGE);
     const start = (page[type] - 1) * ITEMS_PER_PAGE;
@@ -279,7 +267,6 @@ const GovernmentComplaintsDashboard = () => {
     );
   };
 
-  /** Loading + Error States */
   if (isLoading)
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -302,7 +289,6 @@ const GovernmentComplaintsDashboard = () => {
       </div>
     );
 
-  /** Final Render */
   return (
     <div className="space-y-10 p-6">
       <h1 className="text-2xl font-bold text-gray-900">
