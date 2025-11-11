@@ -163,10 +163,24 @@ app.post("/api/raise-complaint",requireAuth(),async (req,res)=>{
     // Get clerk_id and username from authenticated token
     const {clerk_id, username} = await getUserFromAuth(req);
     
+    // Ensure user exists to satisfy FK constraint (complaints.created_by -> users.clerk_id)
+    const { data: existingUser, error: existingUserError } = await supabase
+      .from("users")
+      .select("clerk_id")
+      .eq("clerk_id", clerk_id)
+      .maybeSingle();
+    if (existingUserError) throw existingUserError;
+    if (!existingUser) {
+      const { error: insertUserError } = await supabase
+        .from("users")
+        .insert([{ clerk_id, username, role: "citizen" }]);
+      if (insertUserError) throw insertUserError;
+    }
+    
     // Extract complaint data from request body (no user_id needed)
     const {title, description, latitude, longitude, image, tag} = req.body;
     console.log(req.body)
-    console.log("username",username)
+    console.log("clerk",clerk_id)
     const {data,error} = await supabase.from("complaints").insert([{
       title,
       description,
@@ -411,6 +425,8 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
       .eq("clerk_id", clerk_id)
       .single();
 
+      console.log(clerk_id,user)
+
     if (userError) throw userError;
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -418,8 +434,10 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
     const { data: department, error: deptError } = await supabase
       .from("departments")
       .select("department_id, name")
-      .eq("department_id", user.department_id)
-      .single();
+      .eq("department_id", user.department_id).single();
+
+          console.log(department)
+
 
     if (deptError) throw deptError;
 
@@ -435,6 +453,10 @@ app.get("/api/get-govt-complaints", requireAuth(), async (req, res) => {
     if (complaintError) throw complaintError;
 
     // Step 4️⃣ Return the final combined response
+
+    console.log("AWHODAHADWOH",department)
+    console.log("COMPLAINTS",complaints)
+
     res.status(200).json({
       department_id: user.department_id,
       department_name: department?.name || null,

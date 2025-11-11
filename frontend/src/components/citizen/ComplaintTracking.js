@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin,
@@ -16,14 +16,16 @@ import StatusBadge from "../common/StatusBadge";
 import LocationDisplay from "../common/LocationDisplay";
 import { COMPLAINT_STATUS } from "../../utils/constants";
 import { useApiService } from "../../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 const ComplaintTracking = () => {
   const navigate = useNavigate();
   const apiService = useApiService();
 
-  const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const { data: complaints = [], isLoading: loading, error } = useQuery({
+    queryKey: ['citizenComplaints'],
+    queryFn: apiService.getCitizenComplaints
+  });
 
   // Filters and sorting
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -37,22 +39,7 @@ const ComplaintTracking = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4;
 
-  // ✅ Fetch complaints
-  useEffect(() => {
-    const loadComplaints = async () => {
-      try {
-        setLoading(true);
-        const data = await apiService.getCitizenComplaints();
-        setComplaints(data || []);
-      } catch (err) {
-        console.error("Error loading complaints:", err);
-        setError("Failed to load complaints");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadComplaints();
-  }, []);
+  // ✅ Fetch complaints handled by React Query
 
   // Split active and closed complaints
   const activeComplaints = complaints.filter(

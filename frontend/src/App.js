@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth, useUser } from '@clerk/clerk-react';
+import { useAtom } from 'jotai';
 
 // Page imports
 import LandingPage from './pages/LandingPage';
@@ -22,6 +23,7 @@ import RoleSelectionModal from './components/common/RoleSelectionModal';
 // API and constants
 import { useApiService } from './services/api';
 import { USER_ROLES, COMPLAINT_STATUS } from './utils/constants';
+import { notificationOpenAtom, roleSelectionAtom } from './state/atoms';
 
 // ---- Helper Components ----
 const AdminLoginPage = ({ onLogin }) => {
@@ -68,8 +70,8 @@ const App = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPurpose, setLoginPurpose] = useState('');
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
-  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useAtom(notificationOpenAtom);
+  const [isRoleModalOpen, setIsRoleModalOpen] = useAtom(roleSelectionAtom);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -102,7 +104,7 @@ const App = () => {
             
             // If new user, show role selection modal
             if (response && response.isNewUser) {
-              setShowRoleModal(true);
+              setIsRoleModalOpen(true);
             }
           } catch (saveError) {
             console.error('Error saving user:', saveError);
@@ -127,13 +129,13 @@ const App = () => {
 
   useEffect(() => {
     setShowProfileDropdown(false);
-    setShowNotificationsPanel(false);
+    setIsNotificationsOpen(false);
   }, [location.pathname]);
 
   // With Clerk, we don't need manual login/logout handling
   const handleLogout = () => {
     setShowProfileDropdown(false);
-    setShowNotificationsPanel(false);
+    setIsNotificationsOpen(false);
     navigate('/');
   };
 
@@ -186,7 +188,7 @@ const App = () => {
       alert('Please sign in to view notifications');
       return;
     }
-    setShowNotificationsPanel((prev) => !prev);
+    setIsNotificationsOpen((prev) => !prev);
     setShowProfileDropdown(false);
   };
 
@@ -197,7 +199,7 @@ const App = () => {
       return;
     }
     setShowProfileDropdown((prev) => !prev);
-    setShowNotificationsPanel(false);
+    setIsNotificationsOpen(false);
   };
 
   const handleLandingNavigation = (targetPath) => {
@@ -235,15 +237,15 @@ const App = () => {
       {showProfileDropdown && user && (
         <ProfileDropdown user={user} onClose={() => setShowProfileDropdown(false)} />
       )}
-      {showNotificationsPanel && (
-        <NotificationsPanel onClose={() => setShowNotificationsPanel(false)} />
+      {isNotificationsOpen && (
+        <NotificationsPanel onClose={() => setIsNotificationsOpen(false)} />
       )}
 
       {/* Role Selection Modal for New Users */}
       <RoleSelectionModal
-        isOpen={showRoleModal}
+        isOpen={isRoleModalOpen}
         onRoleSelected={(role) => {
-          setShowRoleModal(false);
+          setIsRoleModalOpen(false);
           // Redirect based on selected role
           if (role === 'admin') {
             navigate('/admin-dashboard');

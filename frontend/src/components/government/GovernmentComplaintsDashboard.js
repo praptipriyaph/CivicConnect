@@ -1,26 +1,16 @@
-import React, {
-  useState,
-  useEffect,
-  useMemo,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useState, useMemo } from "react";
 import { Clock, PlusCircle, Loader } from "lucide-react";
 import { useApiService } from "../../services/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const ITEMS_PER_PAGE = 2;
 
 const GovernmentComplaintsDashboard = () => {
   const apiService = useApiService();
-  const apiRef = useRef(apiService);
-
-  const [complaints, setComplaints] = useState([]);
-  const [department, setDepartment] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const queryClient = useQueryClient();
   const [page, setPage] = useState({ new: 1, active: 1, closed: 1 });
-  const [updating, setUpdating] = useState(false);
   const [updateData, setUpdateData] = useState({});
+  const [updating, setUpdating] = useState(false);
 
   /** Handle local field changes for remarks + stage */
   const handleFieldChange = (id, field, value) => {
@@ -30,55 +20,33 @@ const GovernmentComplaintsDashboard = () => {
     }));
   };
 
-  /** Fetch complaints (with department + updates) */
-  const loadComplaints = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
+  // Use React Query to fetch department + complaints (with updates)
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["govComplaints"],
+    queryFn: async () => {
+      const resp = await apiService.getGovernmentComplaints();
+      const base = resp.complaints || [];
+      const enriched = await Promise.all(
+        base.map(async (c) => {
+          try {
+            const updates = await apiService.getComplaintUpdates(c.complaint_id);
+            return { ...c, updates };
+          } catch {
+            return { ...c, updates: [] };
+          }
+        })
+      );
+      return { department: resp.department_name || "Your Department", complaints: enriched };
+    },
+  });
 
-      const response = await apiRef.current.getGovernmentComplaints();
-      const baseComplaints = response.complaints || [];
-      setDepartment(response.department_name || "Your Department");
+  const complaints = data?.complaints || [];
+  const department = data?.department || "Your Department";
 
-      // fetch updates sequentially (avoids rate-limit race)
-      const complaintsWithUpdates = [];
-      for (const c of baseComplaints) {
-        try {
-          const updates = await apiRef.current.getComplaintUpdates(c.complaint_id);
-          complaintsWithUpdates.push({ ...c, updates });
-        } catch {
-          complaintsWithUpdates.push({ ...c, updates: [] });
-        }
-      }
-
-      setComplaints(complaintsWithUpdates);
-    } catch (err) {
-      console.error("Error loading government complaints:", err);
-      setError("Failed to load complaints.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadComplaints();
-  }, [loadComplaints]);
-
-  /** Categorize complaints */
-  const categorized = useMemo(() => {
-    const forwarded = [];
-    const active = [];
-    const closed = [];
-
-    complaints.forEach((c) => {
-      const status = c.status?.toLowerCase();
-      if (status === "closed") closed.push(c);
-      else if (status === "assigned") forwarded.push(c);
-      else if (["in_progress", "resolved"].includes(status)) active.push(c);
-    });
-
-    return { forwarded, active, closed };
-  }, [complaints]);
+  const updateMutation = useMutation({
+    mutationFn: (payload) => apiService.governmentUpdateComplaint(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["govComplaints"] }),
+  });
 
   /** Determine valid next stages */
   const getNextStages = (status) => {
@@ -108,7 +76,7 @@ const GovernmentComplaintsDashboard = () => {
 
     try {
       setUpdating(true);
-      await apiRef.current.governmentUpdateComplaint({
+      await updateMutation.mutateAsync({
         complaint_id: complaintId,
         description: remark,
         stage,
@@ -116,8 +84,7 @@ const GovernmentComplaintsDashboard = () => {
 
       alert("Complaint updated successfully!");
       setUpdateData((prev) => ({ ...prev, [complaintId]: { stage: "", remark: "" } }));
-
-      await loadComplaints();
+      await refetch();
     } catch (err) {
       console.error("Error updating complaint:", err);
       alert("Failed to update complaint.");
@@ -125,6 +92,22 @@ const GovernmentComplaintsDashboard = () => {
       setUpdating(false);
     }
   };
+
+  /** Categorize complaints */
+  const categorized = useMemo(() => {
+    const forwarded = [];
+    const active = [];
+    const closed = [];
+
+    complaints.forEach((c) => {
+      const status = c.status?.toLowerCase();
+      if (status === "closed") closed.push(c);
+      else if (status === "assigned") forwarded.push(c);
+      else if (["in_progress", "resolved"].includes(status)) active.push(c);
+    });
+
+    return { forwarded, active, closed };
+  }, [complaints]);
 
   /** Render individual complaint card */
   const renderComplaint = (c, allowUpdate = false) => {
@@ -237,18 +220,15 @@ const GovernmentComplaintsDashboard = () => {
 
               <button
                 onClick={() => handleAddUpdate(c.complaint_id, currentStatus)}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-3 py-2 rounded-md flex items-center justify-center"
                 disabled={updating}
-                className={`${
-                  updating ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-                } text-white text-sm px-3 py-2 rounded-md flex items-center justify-center`}
               >
                 {updating ? (
-                  <Loader className="w-4 h-4 animate-spin" />
+                  <Loader className="w-4 h-4 mr-1 animate-spin" />
                 ) : (
-                  <>
-                    <PlusCircle className="w-4 h-4 mr-1" /> Add
-                  </>
+                  <PlusCircle className="w-4 h-4 mr-1" />
                 )}
+                Add
               </button>
             </div>
           </div>
@@ -300,7 +280,7 @@ const GovernmentComplaintsDashboard = () => {
   };
 
   /** Loading + Error States */
-  if (loading)
+  if (isLoading)
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader className="w-8 h-8 animate-spin text-blue-600" />
@@ -311,10 +291,10 @@ const GovernmentComplaintsDashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">Failed to load complaints.</p>
           <button
-            onClick={loadComplaints}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            onClick={() => refetch()}
+            className="bg-blue-600 text-white px-4 py-2 rounded"
           >
             Retry
           </button>
@@ -340,7 +320,7 @@ const GovernmentComplaintsDashboard = () => {
         )}
       </section>
 
-      {/* <section>
+      <section>
         <h2 className="text-xl font-bold text-gray-800 mb-3">
           Active Complaints
         </h2>
@@ -351,7 +331,7 @@ const GovernmentComplaintsDashboard = () => {
         )}
       </section>
 
-      <section>
+      {/* <section>
         <h2 className="text-xl font-bold text-gray-800 mb-3">
           Closed Complaints
         </h2>

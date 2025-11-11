@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MapPin,
@@ -14,30 +14,16 @@ import {
 import StatusBadge from "../common/StatusBadge";
 import { COMPLAINT_STATUS } from "../../utils/constants";
 import { useApiService } from "../../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 const PreviousComplaints = () => {
   const navigate = useNavigate();
   const apiService = useApiService();
-  const [allComplaints, setAllComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // ✅ Load complaints
-  useEffect(() => {
-    const loadComplaints = async () => {
-      try {
-        setLoading(true);
-        const data = await apiService.getCitizenComplaints();
-        setAllComplaints(data);
-      } catch (err) {
-        console.error("Error loading complaints:", err);
-        setError("Failed to load complaints");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadComplaints();
-  }, []);
+  const { data: allComplaints = [], isLoading: loading, error } = useQuery({
+    queryKey: ['citizenComplaints'],
+    queryFn: apiService.getCitizenComplaints
+  });
 
   // ✅ Filter only closed
   const closedComplaints = useMemo(() => {
@@ -123,7 +109,7 @@ const PreviousComplaints = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">Failed to load complaints</p>
           <button
             onClick={() => window.location.reload()}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

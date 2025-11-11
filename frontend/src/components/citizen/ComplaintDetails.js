@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
 import StatusBadge from "../common/StatusBadge";
 import { useApiService } from "../../services/api";
 import { useUser } from "@clerk/clerk-react";
+import { useQuery } from "@tanstack/react-query";
 
 const ComplaintDetails = () => {
   const { id } = useParams();
@@ -19,13 +20,64 @@ const ComplaintDetails = () => {
   const apiService = useApiService();
   const { user } = useUser();
 
-  const [complaint, setComplaint] = useState(location.state?.complaint || null);
-  const [updates, setUpdates] = useState([]);
+  const initialComplaint = location.state?.complaint || null;
+  const [complaintView, setComplaintView] = useState(initialComplaint);
+  const [updatesExtra, setUpdatesExtra] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
-  const [loading, setLoading] = useState(!complaint);
-  const [error, setError] = useState(null);
   const [closing, setClosing] = useState(false);
   const [reopening, setReopening] = useState(false);
+
+  // Fetch complaint list only if we don't have it from location
+  const { data: complaintList = [], isLoading: isListLoading, error: listError } = useQuery({
+    queryKey: ["citizenComplaints"],
+    queryFn: apiService.getCitizenComplaints,
+    enabled: !initialComplaint,
+  });
+
+  // Resolve complaint to display
+  const resolvedComplaint = useMemo(() => {
+    if (initialComplaint) return initialComplaint;
+    return (complaintList || []).find((c) => String(c.complaint_id) === id || String(c.id) === id) || null;
+  }, [initialComplaint, complaintList, id]);
+
+  useEffect(() => {
+    if (resolvedComplaint && !complaintView) setComplaintView(resolvedComplaint);
+  }, [resolvedComplaint, complaintView]);
+
+  // Use complaintView id for updates query
+  const complaintIdForUpdates = complaintView?.complaint_id || id;
+  const { data: updatesData = [], isLoading: isUpdatesLoading } = useQuery({
+    queryKey: ["complaintUpdates", complaintIdForUpdates],
+    queryFn: () => apiService.getComplaintUpdates(complaintIdForUpdates),
+    enabled: !!complaintIdForUpdates,
+  });
+
+  const updates = useMemo(() => {
+    const sorted = (updatesData || []).slice().sort((a, b) => {
+      const ta = new Date(a.update_time || a.updated_at || a.created_at).getTime();
+      const tb = new Date(b.update_time || b.updated_at || b.created_at).getTime();
+      return ta - tb;
+    });
+    return [...sorted, ...updatesExtra];
+  }, [updatesData, updatesExtra]);
+
+  // Update complaintView status from latest update if needed
+  useEffect(() => {
+    if (!complaintView) return;
+    if (updates.length === 0) return;
+    const latest = updates[updates.length - 1];
+    const desc = latest.description || "";
+    let derived = complaintView.status;
+    if (desc.includes("[In Progress]")) derived = "in_progress";
+    else if (desc.includes("[Assigned]")) derived = "assigned";
+    else if (desc.includes("[Resolved]")) derived = "resolved";
+    else if (desc.includes("[Closed]")) derived = "closed";
+    else if (desc.includes("[Lodged]")) derived = "open";
+    // only update if changed
+    if (derived && derived !== complaintView.status) {
+      setComplaintView((p) => ({ ...p, status: derived }));
+    }
+  }, [updates, complaintView]);
 
   const stages = ["Lodged", "Assigned", "In Progress", "Resolved", "Closed"];
   const stageOrder = {
@@ -53,59 +105,17 @@ const ComplaintDetails = () => {
     return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/complaint_images/${img}`;
   };
 
-  // 🧭 Fetch complaint if refreshed
-  useEffect(() => {
-    const fetchComplaint = async () => {
-      if (complaint) return;
-      try {
-        setLoading(true);
-        const data = await apiService.getCitizenComplaints();
-        const found = data.find((c) => c.complaint_id === id || c.id === id);
-        if (found) setComplaint(found);
-        else setError("Complaint not found.");
-      } catch (err) {
-        console.error("Error loading complaint:", err);
-        setError("Failed to load complaint details.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchComplaint();
-  }, [id]);
-
-  // 🕓 Fetch updates
-  useEffect(() => {
-    const fetchUpdates = async () => {
-      if (!id) return;
-      try {
-        const updatesData = await apiService.getComplaintUpdates(id);
-        const arr = (updatesData || []).slice().sort((a, b) => {
-          const ta = new Date(a.update_time || a.updated_at || a.created_at).getTime();
-          const tb = new Date(b.update_time || b.updated_at || b.created_at).getTime();
-          return ta - tb;
-        });
-        setUpdates(arr);
-      } catch (err) {
-        console.error("Error fetching complaint updates:", err);
-      }
-    };
-    fetchUpdates();
-  }, [id]);
-
-  const currentIndex = stageOrder[complaint?.status?.toLowerCase()] ?? 0;
-
-  const images = complaint?.images?.length
-    ? complaint.images.map(formatImageUrl)
-    : complaint?.image
-    ? [formatImageUrl(complaint.image)]
-    : [];
-
-  // 🧠 Stage inference
+  // Fix stage inference to handle undefined description
   const inferStage = (update) => {
-    const desc = update.description?.trim() || "";
+    const desc = update.description || "";
     const role = update.role?.toLowerCase() || "";
     const prefixMatch = desc.match(/^\[(.*?)\]/);
-    if (prefixMatch) return prefixMatch[1].trim();
+    
+    if (prefixMatch) {
+      // Clean up "undefined" in status
+      const status = prefixMatch[1].trim();
+      return status === "undefined" ? update.role : status;
+    }
 
     const lower = desc.toLowerCase();
     if (lower.includes("assign")) return "Assigned";
@@ -133,21 +143,18 @@ const ComplaintDetails = () => {
     try {
       setClosing(true);
       await apiService.closeComplaint({
-        complaint_id: complaint.complaint_id,
+        complaint_id: complaintView.complaint_id,
         description: "[Closed] Complaint closed by citizen after verification.",
       });
 
       // 🔄 Update state immediately
-      setComplaint((prev) => ({ ...prev, status: "closed" }));
-      setUpdates((prev) => [
-        ...prev,
-        {
-          description: "[Closed] Complaint closed by citizen after verification.",
-          update_time: new Date().toISOString(),
-          updated_by: user?.id || "Citizen",
-          role: "citizen",
-        },
-      ]);
+      setComplaintView((prev) => ({ ...prev, status: "closed" }));
+      setUpdatesExtra((prev) => [...prev, {
+        description: "[Closed] Complaint closed by citizen after verification.",
+        update_time: new Date().toISOString(),
+        updated_by: user?.id || "Citizen",
+        role: "citizen",
+      }]);
     } catch (err) {
       console.error("Error closing complaint:", err);
       alert("Failed to close complaint.");
@@ -161,21 +168,18 @@ const ComplaintDetails = () => {
     try {
       setReopening(true);
       await apiService.citizenRecheckComplaint({
-        complaint_id: complaint.complaint_id,
+        complaint_id: complaintView.complaint_id,
         description: "Complaint reopened by citizen for re-evaluation.",
       });
 
       // 🔄 Update state immediately
-      setComplaint((prev) => ({ ...prev, status: "open" }));
-      setUpdates((prev) => [
-        ...prev,
-        {
-          description: "[Lodged] Complaint reopened by citizen for re-evaluation.",
-          update_time: new Date().toISOString(),
-          updated_by: user?.id || "Citizen",
-          role: "citizen",
-        },
-      ]);
+      setComplaintView((prev) => ({ ...prev, status: "open" }));
+      setUpdatesExtra((prev) => [...prev, {
+        description: "[Lodged] Complaint reopened by citizen for re-evaluation.",
+        update_time: new Date().toISOString(),
+        updated_by: user?.id || "Citizen",
+        role: "citizen",
+      }]);
     } catch (err) {
       console.error("Error reopening complaint:", err);
       alert("Failed to reopen complaint.");
@@ -184,7 +188,7 @@ const ComplaintDetails = () => {
     }
   };
 
-  if (loading)
+  if ((!complaintView && isListLoading) || isUpdatesLoading)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-gray-600">
         <Loader className="w-8 h-8 animate-spin mb-3 text-blue-600" />
@@ -192,10 +196,10 @@ const ComplaintDetails = () => {
       </div>
     );
 
-  if (error || !complaint)
+  if (!complaintView || listError)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-gray-500">
-        <p>{error || `No complaint found for ID #${id}`}</p>
+        <p>{listError ? "Failed to load complaint details." : `No complaint found for ID #${id}`}</p>
         <button
           onClick={() => navigate(-1)}
           className="mt-4 text-blue-600 hover:underline"
@@ -220,29 +224,29 @@ const ComplaintDetails = () => {
         <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold text-gray-800">
-              {complaint.title}{" "}
+              {complaintView.title}{" "}
               <span className="text-gray-400 text-sm">
-                #{complaint.complaint_id || complaint.id}
+                #{complaintView.complaint_id || complaintView.id}
               </span>
             </h2>
-            <StatusBadge status={complaint.status} />
+            <StatusBadge status={complaintView.status} />
           </div>
 
-          <p className="text-gray-700 mb-4">{complaint.description}</p>
+          <p className="text-gray-700 mb-4">{complaintView.description}</p>
 
           <div className="flex flex-wrap text-sm text-gray-600 space-x-4 mb-4">
             <span className="flex items-center">
               <MapPin className="w-4 h-4 mr-1" />
-              {complaint.location || "Location not provided"}
+              {complaintView.location || "Location not provided"}
             </span>
             <span className="flex items-center">
               <Calendar className="w-4 h-4 mr-1" />
-              Submitted: {formatDate(complaint.created_at)}
+              Submitted: {formatDate(complaintView.created_at)}
             </span>
           </div>
 
           {/* ✅ Close / Reopen Buttons */}
-          {complaint.status === "resolved" && (
+          {complaintView.status === "resolved" && (
             <div className="mt-4 flex gap-3">
               <button
                 onClick={handleCloseComplaint}
@@ -276,7 +280,7 @@ const ComplaintDetails = () => {
           <div className="flex justify-between relative mb-8">
             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200"></div>
             {stages.map((s, i) => {
-              const isCompleted = i <= (stageOrder[complaint.status?.toLowerCase()] ?? 0);
+              const isCompleted = i <= (stageOrder[complaintView.status?.toLowerCase()] ?? 0);
               return (
                 <div key={s} className="relative flex flex-col items-center z-10">
                   <div

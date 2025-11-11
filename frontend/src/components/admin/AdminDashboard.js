@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   FileText,
   Clock,
@@ -10,65 +10,48 @@ import {
 } from "lucide-react";
 import StatusBadge from "../common/StatusBadge";
 import { useApiService } from "../../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 const AdminDashboard = () => {
   const apiService = useApiService();
-  const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [slideIn, setSlideIn] = useState(false);
 
-  useEffect(() => {
-    const loadComplaints = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiService.getAdminComplaints();
-        console.log("Fetched complaints:", data);
-        setComplaints(data || []);
-      } catch (err) {
-        console.error("Error loading admin complaints:", err);
-        setError("Failed to load complaints");
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Use react-query data/isLoading/error
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["adminComplaints"],
+    queryFn: apiService.getAdminComplaints,
+  });
+  const complaints = data || [];
 
-    loadComplaints();
+  React.useEffect(() => {
     setTimeout(() => setSlideIn(true), 100);
   }, []);
 
-  // Stats
+  // Stats (derive from complaints)
   const stats = {
     total: complaints.length,
-    open: complaints.filter((c) => c.status === "open").length,
-    assigned: complaints.filter((c) => c.status === "assigned").length,
-    inProgress: complaints.filter((c) => c.status === "in_progress").length,
-    reopened: complaints.filter((c) => c.status === "reopened").length,
+    open: complaints.filter((c) => (c.status || "").toLowerCase() === "open").length,
+    assigned: complaints.filter((c) => (c.status || "").toLowerCase() === "assigned").length,
+    inProgress: complaints.filter((c) => (c.status || "").toLowerCase() === "in_progress").length,
+    reopened: complaints.filter((c) => (c.status || "").toLowerCase() === "reopened").length,
   };
 
-  // Filter + Search logic
   const filteredComplaints = complaints.filter((c) => {
-    const status = c.status?.toLowerCase() || "";
-    const tag = c.tag?.toLowerCase() || "";
-    const title = c.title?.toLowerCase() || "";
+    const status = (c.status || "").toLowerCase();
+    const tag = (c.tag || "").toLowerCase();
+    const title = (c.title || "").toLowerCase();
     const id = String(c.complaint_id || "");
-
-    const matchesStatus =
-      filterStatus === "all" || status === filterStatus.toLowerCase();
-
+    const matchesStatus = filterStatus === "all" || status === filterStatus.toLowerCase();
     const matchesSearch =
       title.includes(searchQuery.toLowerCase()) ||
       tag.includes(searchQuery.toLowerCase()) ||
       id.includes(searchQuery);
-
     return matchesStatus && matchesSearch;
   });
 
-  // Loading UI
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -79,12 +62,11 @@ const AdminDashboard = () => {
     );
   }
 
-  // Error UI
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">Failed to load complaints.</p>
           <button
             onClick={() => window.location.reload()}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"

@@ -5,6 +5,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { useUser } from "@clerk/clerk-react";
 import { useApiService } from "../../services/api";
 import LocationPicker from "../common/LocationPicker";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 const initialFormState = {
   name: "",
@@ -26,6 +27,25 @@ const ComplaintForm = () => {
   const navigate = useNavigate();
   const apiService = useApiService();
   const { user } = useUser();
+  const queryClient = useQueryClient();
+
+  const raiseComplaintMutation = useMutation({
+    mutationFn: apiService.raiseComplaint,
+    onSuccess: (complaint) => {
+      toast.success("Complaint submitted successfully!");
+      queryClient.invalidateQueries({ queryKey: ['citizenComplaints'] });
+      // Cleanup
+      formData.evidence.forEach((e) => e.preview && URL.revokeObjectURL(e.preview));
+      setFormData(initialFormState);
+      navigate("/track-complaint", {
+        state: { complaintId: complaint.complaint_id },
+      });
+    },
+    onError: () => {
+      toast.error("Failed to submit complaint. Please try again.");
+    },
+    onSettled: () => setLoading(false)
+  });
 
   useEffect(() => {
     if (user?.primaryEmailAddress?.emailAddress) {
@@ -139,19 +159,10 @@ const ComplaintForm = () => {
 
       console.log("Submitting complaint payload:", complaintData);
 
-      const complaint = await apiService.raiseComplaint(complaintData);
-      toast.success("Complaint submitted successfully!");
-
-      // Cleanup
-      formData.evidence.forEach((e) => e.preview && URL.revokeObjectURL(e.preview));
-      setFormData(initialFormState);
-      navigate("/track-complaint", {
-        state: { complaintId: complaint.complaint_id },
-      });
+      await raiseComplaintMutation.mutateAsync(complaintData);
     } catch (error) {
       console.error("Error submitting complaint:", error);
       toast.error("Failed to submit complaint. Please try again.");
-    } finally {
       setLoading(false);
     }
   };

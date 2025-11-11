@@ -1,4 +1,5 @@
 import { useAuth } from '@clerk/clerk-react';
+import axios from 'axios';
 
 // Using proxy in development, so relative URLs work
 const API_BASE_URL = 'http://localhost:5000';
@@ -6,6 +7,9 @@ const API_BASE_URL = 'http://localhost:5000';
 class ApiService {
   constructor() {
     this.baseURL = 'http://localhost:5000';
+    this.client = axios.create({
+      baseURL: this.baseURL
+    });
   }
 
   async getAuthHeaders() {
@@ -20,26 +24,35 @@ class ApiService {
   /**
    * Make authenticated API request
    */
-  async authenticatedFetch(endpoint, options = {}, getToken) {
+  async authenticatedRequest(endpoint, options = {}, getToken) {
     const token = await getToken();
+    const method = (options.method || 'GET').toUpperCase();
+    const isMultipart = options.isMultipart === true;
 
     const headers = {
-      'Content-Type': 'application/json',
+      ...(isMultipart ? {} : { 'Content-Type': 'application/json' }),
       'Authorization': `Bearer ${token}`,
       ...options.headers,
     };
 
-    const response = await fetch(`${this.baseURL}${endpoint}`, {
-      ...options,
-      headers,
-    });
+    const axiosConfig = {
+      url: endpoint,
+      method,
+      headers
+    };
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Network error' }));
-      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+    // Move body to data for axios
+    if (options.body !== undefined) {
+      axiosConfig.data = options.body instanceof FormData ? options.body : options.body;
     }
 
-    return response.json();
+    try {
+      const { data } = await this.client.request(axiosConfig);
+      return data;
+    } catch (err) {
+      const message = err?.response?.data?.error || err?.message || 'Network error';
+      throw new Error(message);
+    }
   }
 
   // ===== USER MANAGEMENT =====
@@ -48,9 +61,9 @@ class ApiService {
    * Save user profile to database
    */
   async saveUser(userData, getToken) {
-    return this.authenticatedFetch('/api/save-user', {
+    return this.authenticatedRequest('/api/save-user', {
       method: 'POST',
-      body: JSON.stringify(userData),
+      body: userData,
     }, getToken);
   }
 
@@ -58,9 +71,9 @@ class ApiService {
    * Update user role
    */
   async updateUserRole(role, getToken) {
-    return this.authenticatedFetch('/api/update-user-role', {
+    return this.authenticatedRequest('/api/update-user-role', {
       method: 'PATCH',
-      body: JSON.stringify({ role }),
+      body: { role },
     }, getToken);
   }
 
@@ -70,9 +83,9 @@ class ApiService {
    * Raise a new complaint
    */
   async raiseComplaint(complaintData, getToken) {
-    return this.authenticatedFetch('/api/raise-complaint', {
+    return this.authenticatedRequest('/api/raise-complaint', {
       method: 'POST',
-      body: JSON.stringify(complaintData),
+      body: complaintData,
     }, getToken);
   }
 
@@ -80,7 +93,7 @@ class ApiService {
    * Get citizen's complaints
    */
   async getCitizenComplaints(getToken) {
-    return this.authenticatedFetch('/api/get-citizen-complaints', {
+    return this.authenticatedRequest('/api/get-citizen-complaints', {
       method: 'GET',
     }, getToken);
   }
@@ -89,7 +102,7 @@ class ApiService {
    * Get admin complaints (open, in_progress, reopened, assigned)
    */
   async getAdminComplaints(getToken) {
-    return this.authenticatedFetch('/api/get-admin-complaints', {
+    return this.authenticatedRequest('/api/get-admin-complaints', {
       method: 'GET',
     }, getToken);
   }
@@ -98,9 +111,9 @@ class ApiService {
    * Admin updates complaint (assign or recheck)
    */
   async adminUpdateComplaint(updateData, getToken) {
-    return this.authenticatedFetch('/api/admin-update-complaint', {
+    return this.authenticatedRequest('/api/admin-update-complaint', {
       method: 'PATCH',
-      body: JSON.stringify(updateData),
+      body: updateData,
     }, getToken);
   }
 
@@ -108,9 +121,9 @@ class ApiService {
    * Citizen rechecks/reopens complaint
    */
   async citizenRecheckComplaint(complaintData, getToken) {
-    return this.authenticatedFetch('/api/citizen-recheck-complaint', {
+    return this.authenticatedRequest('/api/citizen-recheck-complaint', {
       method: 'PATCH',
-      body: JSON.stringify(complaintData),
+      body: complaintData,
     }, getToken);
   }
 
@@ -118,9 +131,9 @@ class ApiService {
    * Close complaint (both admin and citizen can close)
    */
   async closeComplaint(closeData, getToken) {
-    return this.authenticatedFetch('/api/close-complaint', {
+    return this.authenticatedRequest('/api/close-complaint', {
       method: 'POST',
-      body: JSON.stringify(closeData),
+      body: closeData,
     }, getToken);
   }
 
@@ -130,9 +143,28 @@ class ApiService {
    * Get government officials by department
    */
   async getGovernmentOfficials(departmentTag, getToken) {
-    return this.authenticatedFetch('/api/get-govt-officials', {
+    return this.authenticatedRequest('/api/get-govt-officials', {
       method: 'POST',
-      body: JSON.stringify({ tag: departmentTag }),
+      body: { tag: departmentTag },
+    }, getToken);
+  }
+
+  /**
+   * Get departments (id, name)
+   */
+  async getDepartments(getToken) {
+    return this.authenticatedRequest('/api/departments', {
+      method: 'GET',
+    }, getToken);
+  }
+
+  /**
+   * Set government department for current user
+   */
+  async setGovernmentDepartment(department_id, getToken) {
+    return this.authenticatedRequest('/api/get-govt-department', {
+      method: 'POST',
+      body: { department_id },
     }, getToken);
   }
 
@@ -141,8 +173,8 @@ class ApiService {
    * Backend auto-detects official from Clerk token
    */
   async getGovernmentComplaints(getToken) {
-    return this.authenticatedFetch('/api/get-govt-complaints', {
-      method: 'get',
+    return this.authenticatedRequest('/api/get-govt-complaints', {
+      method: 'GET',
     }, getToken);
   }
 
@@ -150,9 +182,9 @@ class ApiService {
    * Government official updates complaint status
    */
   async governmentUpdateComplaint(updateData, getToken) {
-    return this.authenticatedFetch('/api/govt-update-complaint', {
+    return this.authenticatedRequest('/api/govt-update-complaint', {
       method: 'PATCH',
-      body: JSON.stringify(updateData),
+      body: updateData,
     }, getToken);
   }
 
@@ -162,9 +194,12 @@ class ApiService {
    * Get complaint update history
    */
   async getComplaintUpdates(complaintId, getToken) {
-    return this.authenticatedFetch('/api/get-complaint-updates', {
+    return this.authenticatedRequest('/api/get-complaint-updates', {
       method: 'POST',
       body: JSON.stringify({ complaint_id: complaintId }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
     }, getToken);
   }
 
@@ -175,24 +210,22 @@ class ApiService {
    */
   async uploadImage(file, getToken) {
     const token = await getToken();
-    
+
     const formData = new FormData();
     formData.append('image', file);
 
-    const response = await fetch(`${this.baseURL}/api/upload-image`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData, // Don't set Content-Type, browser will set it with boundary
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
-      throw new Error(errorData.error || 'Failed to upload image');
+    try {
+      const { data } = await this.client.post('/api/upload-image', formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return data; // { url, path }
+    } catch (err) {
+      const message = err?.response?.data?.error || 'Failed to upload image';
+      throw new Error(message);
     }
-
-    return response.json(); // Returns { url, path }
   }
 }
 
@@ -219,6 +252,8 @@ export const useApiService = () => {
 
     // Government management
     getGovernmentOfficials: (departmentTag) => apiService.getGovernmentOfficials(departmentTag, getToken),
+    getDepartments: () => apiService.getDepartments(getToken),
+    setGovernmentDepartment: (departmentId) => apiService.setGovernmentDepartment(departmentId, getToken),
     getGovernmentComplaints: () => apiService.getGovernmentComplaints(getToken),
     governmentUpdateComplaint: (updateData) => apiService.governmentUpdateComplaint(updateData, getToken),
 

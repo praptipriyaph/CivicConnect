@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   FileText,
   CheckCircle,
@@ -11,19 +11,18 @@ import {
 } from "lucide-react";
 import StatusBadge from "../common/StatusBadge";
 import { useApiService } from "../../services/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const departments = ["Roads", "Water", "Waste", "Electricity", "Health"];
 
 const AdminScrutinyDashboard = () => {
   const apiService = useApiService();
-  const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [sortOrder, setSortOrder] = useState("desc");
   const [filterCategory, setFilterCategory] = useState("all"); // ✅ start as "all"
   const [filterStatus, setFilterStatus] = useState("assigned");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
+  const queryClient = useQueryClient();
 
   // Format date safely
   const formatDate = (dateStr) => {
@@ -32,24 +31,22 @@ const AdminScrutinyDashboard = () => {
     return isNaN(d.getTime()) ? "—" : d.toLocaleString();
   };
 
-  // ✅ Load complaints
-  useEffect(() => {
-    const loadComplaints = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiService.getAdminComplaints();
-        console.log("Fetched complaints:", data);
-        setComplaints(data || []);
-      } catch (err) {
-        console.error("Error loading complaints:", err);
-        setError("Failed to load complaints.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadComplaints();
-  }, []);
+  // ✅ Load complaints (use React Query's status instead of local loading/error)
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['adminComplaints'],
+    queryFn: apiService.getAdminComplaints,
+  });
+  const complaints = data || [];
+
+  const assignMutation = useMutation({
+    mutationFn: (payload) => apiService.adminUpdateComplaint(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminComplaints'] })
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: (payload) => apiService.closeComplaint(payload),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminComplaints'] })
+  });
 
   // ✅ Assign complaint
   const handleAssign = async (complaintId, dept) => {
@@ -62,19 +59,12 @@ const AdminScrutinyDashboard = () => {
     }
 
     try {
-      await apiService.adminUpdateComplaint({
+      await assignMutation.mutateAsync({
         complaint_id: complaintId,
         description: `Assigned to ${selectedDept} department.`,
       });
 
       alert(`Complaint forwarded to ${selectedDept} successfully.`);
-      setComplaints((prev) =>
-        prev.map((c) =>
-          c.complaint_id === complaintId
-            ? { ...c, status: "assigned", assigned_department: selectedDept }
-            : c
-        )
-      );
     } catch (error) {
       console.error("Error assigning complaint:", error);
       alert("Failed to forward complaint.");
@@ -88,16 +78,11 @@ const AdminScrutinyDashboard = () => {
       return alert("Closing reason cannot be empty.");
 
     try {
-      await apiService.closeComplaint({
+      await closeMutation.mutateAsync({
         complaint_id: complaintId,
         description: reason,
       });
       alert("Complaint closed successfully.");
-      setComplaints((prev) =>
-        prev.map((c) =>
-          c.complaint_id === complaintId ? { ...c, status: "closed" } : c
-        )
-      );
     } catch (error) {
       console.error("Error closing complaint:", error);
       alert("Failed to close complaint.");
@@ -141,12 +126,13 @@ const AdminScrutinyDashboard = () => {
     currentPage * itemsPerPage
   );
 
-  const openComplaints = complaints.filter(
-    (c) => c.status === "open" || c.status === "reopened"
-  );
+  const openComplaints = complaints.filter((c) => {
+    const s = (c.status || "").toLowerCase();
+    return s === "open" || s === "reopened";
+  });
 
   // 🌀 Loading
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -162,7 +148,7 @@ const AdminScrutinyDashboard = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-red-600 mb-4">Failed to load complaints.</p>
           <button
             onClick={() => window.location.reload()}
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -221,7 +207,7 @@ const AdminScrutinyDashboard = () => {
               >
                 <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
                   <h3 className="font-medium text-gray-900">
-                    {complaint.title} (#{complaint.complaint_id.slice(0, 8)})
+                    {complaint.title} (#{String(complaint.complaint_id || complaint.id || "").slice(0, 8)})
                   </h3>
                   <StatusBadge status={complaint.status} />
                 </div>
@@ -358,7 +344,7 @@ const AdminScrutinyDashboard = () => {
             >
               <div className="flex justify-between items-start">
                 <h3 className="font-medium text-gray-900">
-                  {complaint.title} (#{complaint.complaint_id.slice(0, 8)})
+                  {complaint.title} (#{String(complaint.complaint_id || complaint.id || "").slice(0, 8)})
                 </h3>
                 <StatusBadge status={complaint.status} />
               </div>

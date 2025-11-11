@@ -1,60 +1,36 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from "@clerk/clerk-react";
+import { useApiService } from '../services/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 
 const GovtSelect = () => {
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const navigate = useNavigate();
-  const { getToken } = useAuth();
+  const api = useApiService();
+  const queryClient = useQueryClient();
 
 
-  // Fetch departments from Supabase
-useEffect(() => {
-  const fetchDepartments = async () => {
-    try {
-        const token = await getToken();
-      const response = await axios.get('http://localhost:5000/api/departments', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      setDepartments(response.data);
-    } catch (error) {
-      console.error('Error fetching departments:', error);
-    }
-  };
-  fetchDepartments();
-}, []);
+// Fetch departments
+useQuery({
+  queryKey: ['departments'],
+  queryFn: api.getDepartments,
+  onSuccess: (data) => setDepartments(data || [])
+});
 
-  const handleSubmit = async (e) => {
+  const setDept = useMutation({
+    mutationFn: (id) => api.setGovernmentDepartment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['govComplaints'] });
+      navigate('/gov-portal');
+    },
+    onError: () => alert('Error assigning department')
+  });
+
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-        const token = await getToken();
-      const response = await axios.post(
-        'http://localhost:5000/api/get-govt-department',
-        { department_id: selectedDepartment },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.data.flag) {
-        // Successfully assigned department
-        navigate('/gov-portal');
-      } else {
-        alert('Failed to assign department');
-      }
-    } catch (error) {
-      console.error('Error assigning department:', error);
-      alert('Error assigning department');
-    }
+    setDept.mutate(selectedDepartment);
   };
 
   return (
