@@ -18,7 +18,7 @@ const supabase=createClient(process.env.SUPABASE_URL,process.env.SUPABASE_KEY)
 
 const upload = multer({ 
   storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB limit
+  limits: { fileSize: 15 * 1024 * 1024 }, 
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);

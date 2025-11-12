@@ -4,7 +4,7 @@ import axios from 'axios';
 
 class ApiService {
   constructor() {
-    this.baseURL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+    this.baseURL = "https://civicconnect-lfft.onrender.com";
     this.client = axios.create({
       baseURL: this.baseURL
     });
@@ -203,12 +203,10 @@ export const useApiService = () => {
   const { getToken } = useAuth();
 
   return {
-    // User management
     saveUser: (userData) => apiService.saveUser(userData, getToken),
     updateUserRole: (role) => apiService.updateUserRole(role, getToken),
     getCurrentUser: () => apiService.getCurrentUser(getToken),
 
-    // Complaint management
     raiseComplaint: (complaintData) => apiService.raiseComplaint(complaintData, getToken),
     getCitizenComplaints: () => apiService.getCitizenComplaints(getToken),
     getAdminComplaints: () => apiService.getAdminComplaints(getToken),
@@ -217,7 +215,6 @@ export const useApiService = () => {
     citizenRecheckComplaint: (complaintData) => apiService.citizenRecheckComplaint(complaintData, getToken),
     closeComplaint: (closeData) => apiService.closeComplaint(closeData, getToken),
 
-    // Government management
     getGovernmentOfficials: (departmentTag) => apiService.getGovernmentOfficials(departmentTag, getToken),
     getDepartments: () => apiService.getDepartments(getToken),
     setGovernmentDepartment: (departmentId) => apiService.setGovernmentDepartment(departmentId, getToken),
@@ -225,10 +222,8 @@ export const useApiService = () => {
     getGovernmentComplaintsAll: () => apiService.getGovernmentComplaintsAll(getToken),
     governmentUpdateComplaint: (updateData) => apiService.governmentUpdateComplaint(updateData, getToken),
 
-    // Complaint updates
     getComplaintUpdates: (complaintId) => apiService.getComplaintUpdates(complaintId, getToken),
 
-    // Image upload
     uploadImage: (file) => apiService.uploadImage(file, getToken),
   };
 };
