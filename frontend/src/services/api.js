@@ -5,7 +5,7 @@ console.log("THIS IS MY API URL TO BE HIT",process.env.REACT_APP_API_URL)
 
 class ApiService {
   constructor() {
-    this.baseURL = "https://civicconnect-lfft.onrender.com";
+    this.baseURL = process.env.REACT_APP_API_URL;
     this.client = axios.create({
       baseURL: this.baseURL
     });
