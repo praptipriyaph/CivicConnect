@@ -33,8 +33,10 @@ const ComplaintForm = () => {
     mutationFn: apiService.raiseComplaint,
     onSuccess: (complaint) => {
       toast.success("Complaint submitted successfully!");
-      queryClient.invalidateQueries({ queryKey: ['citizenComplaints'] });
-      formData.evidence.forEach((e) => e.preview && URL.revokeObjectURL(e.preview));
+      queryClient.invalidateQueries({ queryKey: ["citizenComplaints"] });
+      formData.evidence.forEach(
+        (e) => e.preview && URL.revokeObjectURL(e.preview),
+      );
       setFormData(initialFormState);
       navigate("/track-complaint", {
         state: { complaintId: complaint.complaint_id },
@@ -43,7 +45,7 @@ const ComplaintForm = () => {
     onError: () => {
       toast.error("Failed to submit complaint. Please try again.");
     },
-    onSettled: () => setLoading(false)
+    onSettled: () => setLoading(false),
   });
 
   useEffect(() => {
@@ -93,7 +95,7 @@ const ComplaintForm = () => {
         return;
       }
       const mapped = newFiles.map((f) => ({
-        key : `${f.name}-${f.lastModified}`,
+        key: `${f.name}-${f.lastModified}`,
         file: f,
         preview: URL.createObjectURL(f),
       }));
@@ -148,12 +150,12 @@ const ComplaintForm = () => {
       }
 
       const complaintData = {
-        title: formData.title || formData.issueCategory, 
+        title: formData.title || formData.issueCategory,
         description: formData.description,
         latitude: formData.latitude,
         longitude: formData.longitude,
         image: imageUrl,
-        tag: formData.issueCategory, 
+        tag: formData.issueCategory,
       };
 
       console.log("Submitting complaint payload:", complaintData);
@@ -200,19 +202,19 @@ const ComplaintForm = () => {
             <label className="block text-sm font-medium mb-1">
               Issue Category <span className="text-red-500">*</span>
             </label>
-              <select
-                name="issueCategory"
-                value={formData.issueCategory}
-                onChange={handleChange}
-                className="w-full border rounded-lg p-3"
-              >
-                <option value="">Select category</option>
-                <option value="Roads">Road Damage</option>
-                <option value="Waste">Waste Management Issue</option>
-                <option value="Water">Water Leakage</option>
-                <option value="Electricity">Electricity Problem</option>
-                <option value="Health">Health and Sanitation Issue</option>
-              </select>
+            <select
+              name="issueCategory"
+              value={formData.issueCategory}
+              onChange={handleChange}
+              className="w-full border rounded-lg p-3"
+            >
+              <option value="">Select category</option>
+              <option value="Roads">Road Damage</option>
+              <option value="Waste">Waste Management Issue</option>
+              <option value="Water">Water Leakage</option>
+              <option value="Electricity">Electricity Problem</option>
+              <option value="Health">Health and Sanitation Issue</option>
+            </select>
           </div>
 
           <div>
@@ -229,7 +231,8 @@ const ComplaintForm = () => {
             />
           </div>
 
-          <LocationPicker className="z-0"
+          <LocationPicker
+            className="z-0"
             latitude={formData.latitude}
             longitude={formData.longitude}
             onLocationChange={handleLocationChange}

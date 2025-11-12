@@ -27,14 +27,19 @@ const GovernmentComplaintsDashboard = () => {
       const enriched = await Promise.all(
         base.map(async (c) => {
           try {
-            const updates = await apiService.getComplaintUpdates(c.complaint_id);
+            const updates = await apiService.getComplaintUpdates(
+              c.complaint_id,
+            );
             return { ...c, updates };
           } catch {
             return { ...c, updates: [] };
           }
-        })
+        }),
       );
-      return { department: resp.department_name || "Your Department", complaints: enriched };
+      return {
+        department: resp.department_name || "Your Department",
+        complaints: enriched,
+      };
     },
   });
 
@@ -43,7 +48,8 @@ const GovernmentComplaintsDashboard = () => {
 
   const updateMutation = useMutation({
     mutationFn: (payload) => apiService.governmentUpdateComplaint(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["govComplaints"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["govComplaints"] }),
   });
 
   const getNextStages = (status) => {
@@ -79,7 +85,10 @@ const GovernmentComplaintsDashboard = () => {
       });
 
       alert("Complaint updated successfully!");
-      setUpdateData((prev) => ({ ...prev, [complaintId]: { stage: "", remark: "" } }));
+      setUpdateData((prev) => ({
+        ...prev,
+        [complaintId]: { stage: "", remark: "" },
+      }));
       await refetch();
     } catch (err) {
       console.error("Error updating complaint:", err);
@@ -142,7 +151,7 @@ const GovernmentComplaintsDashboard = () => {
                   c.image.startsWith("http")
                     ? c.image
                     : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/complaint_images/${c.image}`,
-                  "_blank"
+                  "_blank",
                 )
               }
             />
@@ -165,8 +174,7 @@ const GovernmentComplaintsDashboard = () => {
                 {u.name && (
                   <p className="text-xs text-gray-400">
                     Updated by: {u.name}{" "}
-                    {u.department ? `(${u.department}) ` : ""}
-                    ({u.role})
+                    {u.department ? `(${u.department}) ` : ""}({u.role})
                   </p>
                 )}
               </li>

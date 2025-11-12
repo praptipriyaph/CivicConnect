@@ -28,13 +28,13 @@ const GovernmentOverview = () => {
 
     const total = complaints.length;
     const inProgress = complaints.filter(
-      (c) => c.status?.toLowerCase() === "in_progress"
+      (c) => c.status?.toLowerCase() === "in_progress",
     ).length;
-    const resolved = complaints.filter(
-      (c) => ["resolved", "closed"].includes(c.status?.toLowerCase())
+    const resolved = complaints.filter((c) =>
+      ["resolved", "closed"].includes(c.status?.toLowerCase()),
     ).length;
     const assigned = complaints.filter(
-      (c) => c.status?.toLowerCase() === "assigned"
+      (c) => c.status?.toLowerCase() === "assigned",
     ).length;
 
     return [
@@ -101,8 +101,8 @@ const GovernmentOverview = () => {
             >
               <h3 className="font-semibold text-gray-800">{dept.name}</h3>
               <p className="text-sm text-gray-600">
-                Total: {dept.total} | Assigned: {dept.assigned} | In Progress: {dept.inProgress} | Resolved:{" "}
-                {dept.resolved}
+                Total: {dept.total} | Assigned: {dept.assigned} | In Progress:{" "}
+                {dept.inProgress} | Resolved: {dept.resolved}
               </p>
             </div>
           ))}
@@ -114,7 +114,8 @@ const GovernmentOverview = () => {
               {selected.name} Department Details
             </h3>
             <p className="text-sm text-gray-600 mt-1">
-              Assigned: {selected.assigned}, In Progress: {selected.inProgress}, Resolved: {selected.resolved} out of {selected.total} complaints.
+              Assigned: {selected.assigned}, In Progress: {selected.inProgress},
+              Resolved: {selected.resolved} out of {selected.total} complaints.
             </p>
           </div>
         )}

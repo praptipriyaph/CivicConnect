@@ -22,9 +22,13 @@ const ComplaintTracking = () => {
   const navigate = useNavigate();
   const apiService = useApiService();
 
-  const { data: complaints = [], isLoading: loading, error } = useQuery({
-    queryKey: ['citizenComplaints'],
-    queryFn: apiService.getCitizenComplaints
+  const {
+    data: complaints = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ["citizenComplaints"],
+    queryFn: apiService.getCitizenComplaints,
   });
 
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -38,10 +42,10 @@ const ComplaintTracking = () => {
   const itemsPerPage = 4;
 
   const activeComplaints = complaints.filter(
-    (c) => c.status?.toLowerCase() !== COMPLAINT_STATUS.CLOSED.toLowerCase()
+    (c) => c.status?.toLowerCase() !== COMPLAINT_STATUS.CLOSED.toLowerCase(),
   );
   const previousComplaints = complaints.filter(
-    (c) => c.status?.toLowerCase() === COMPLAINT_STATUS.CLOSED.toLowerCase()
+    (c) => c.status?.toLowerCase() === COMPLAINT_STATUS.CLOSED.toLowerCase(),
   );
 
   const filteredAndSortedActive = useMemo(() => {
@@ -49,13 +53,13 @@ const ComplaintTracking = () => {
 
     if (selectedCategory !== "all") {
       result = result.filter(
-        (c) => c.tag?.toLowerCase() === selectedCategory.toLowerCase()
+        (c) => c.tag?.toLowerCase() === selectedCategory.toLowerCase(),
       );
     }
 
     if (selectedStatus !== "all") {
       result = result.filter(
-        (c) => c.status?.toLowerCase() === selectedStatus.toLowerCase()
+        (c) => c.status?.toLowerCase() === selectedStatus.toLowerCase(),
       );
     }
 
@@ -73,7 +77,7 @@ const ComplaintTracking = () => {
 
     if (prevCategory !== "all") {
       result = result.filter(
-        (c) => c.tag?.toLowerCase() === prevCategory.toLowerCase()
+        (c) => c.tag?.toLowerCase() === prevCategory.toLowerCase(),
       );
     }
 
@@ -89,7 +93,7 @@ const ComplaintTracking = () => {
   const totalPages = Math.ceil(filteredAndSortedActive.length / itemsPerPage);
   const paginatedActive = filteredAndSortedActive.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const formatDate = (dateStr) => {
@@ -261,9 +265,11 @@ const ComplaintTracking = () => {
             You have no closed complaints yet.
           </p>
         ) : (
-          filteredAndSortedPrevious.slice(0, 3).map((c) => (
-            <ComplaintCard key={c.complaint_id} c={c} navigate={navigate} />
-          ))
+          filteredAndSortedPrevious
+            .slice(0, 3)
+            .map((c) => (
+              <ComplaintCard key={c.complaint_id} c={c} navigate={navigate} />
+            ))
         )}
 
         {filteredAndSortedPrevious.length > 3 && (

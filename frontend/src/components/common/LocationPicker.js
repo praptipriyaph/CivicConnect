@@ -1,15 +1,20 @@
 import React, { useState, useEffect, useRef } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap, Circle } from "react-leaflet";
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMap,
+  Circle,
+} from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 const defaultIcon = L.icon({
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   iconRetinaUrl:
     "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
@@ -24,9 +29,15 @@ function FlyToLocation({ position }) {
   return null;
 }
 
-const LocationPicker = ({ latitude, longitude, onLocationChange, error, className }) => {
+const LocationPicker = ({
+  latitude,
+  longitude,
+  onLocationChange,
+  error,
+  className,
+}) => {
   const [position, setPosition] = useState(
-    latitude != null && longitude != null ? [latitude, longitude] : null
+    latitude != null && longitude != null ? [latitude, longitude] : null,
   );
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
@@ -51,7 +62,10 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
         const q = encodeURIComponent(query);
         const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&addressdetails=1&limit=6`;
         const res = await fetch(url, {
-          headers: { "Accept-Language": "en-US", "User-Agent": "CivicConnect/1.0" },
+          headers: {
+            "Accept-Language": "en-US",
+            "User-Agent": "CivicConnect/1.0",
+          },
         });
         const data = await res.json();
         setSuggestions(
@@ -60,7 +74,7 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
             lat: parseFloat(d.lat),
             lon: parseFloat(d.lon),
             type: d.type,
-          }))
+          })),
         );
       } catch (e) {
         setSuggestions([]);
@@ -94,7 +108,7 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
       (err) => {
         alert("Unable to retrieve your location.");
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true },
     );
   };
 
@@ -114,7 +128,7 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
     if (onLocationChange) onLocationChange(null, null);
   };
 
-  const mapCenter = position || [20.5937, 78.9629]; 
+  const mapCenter = position || [20.5937, 78.9629];
 
   return (
     <div className={className}>
@@ -142,7 +156,9 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
             Clear
           </button>
         </div>
-        {loadingSearch && <div className="text-sm text-gray-500 mt-1">Searching…</div>}
+        {loadingSearch && (
+          <div className="text-sm text-gray-500 mt-1">Searching…</div>
+        )}
         {suggestions.length > 0 && (
           <ul className="bg-white border rounded mt-2 max-h-40 overflow-auto z-50">
             {suggestions.map((s, idx) => (
@@ -160,9 +176,13 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
       </div>
 
       <div style={{ height: 320 }} className="rounded overflow-hidden">
-        <MapContainer center={mapCenter} zoom={position ? 14 : 5} style={{ height: "100%" }}>
+        <MapContainer
+          center={mapCenter}
+          zoom={position ? 14 : 5}
+          style={{ height: "100%" }}
+        >
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
+            attribution="&copy; OpenStreetMap contributors"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <FlyToLocation position={position} />
@@ -176,10 +196,16 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
               >
                 <Popup>
                   Selected location
-                  <div className="text-xs mt-1">Lat: {position[0].toFixed(6)} Lon: {position[1].toFixed(6)}</div>
+                  <div className="text-xs mt-1">
+                    Lat: {position[0].toFixed(6)} Lon: {position[1].toFixed(6)}
+                  </div>
                 </Popup>
               </Marker>
-              <Circle center={position} radius={30} pathOptions={{ color: "blue", fillOpacity: 0.1 }} />
+              <Circle
+                center={position}
+                radius={30}
+                pathOptions={{ color: "blue", fillOpacity: 0.1 }}
+              />
             </>
           )}
         </MapContainer>
@@ -189,5 +215,3 @@ const LocationPicker = ({ latitude, longitude, onLocationChange, error, classNam
 };
 
 export default LocationPicker;
-
-

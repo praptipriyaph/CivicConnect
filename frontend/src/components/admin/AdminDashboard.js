@@ -30,10 +30,17 @@ const AdminDashboard = () => {
 
   const stats = {
     total: complaints.length,
-    open: complaints.filter((c) => (c.status || "").toLowerCase() === "open").length,
-    assigned: complaints.filter((c) => (c.status || "").toLowerCase() === "assigned").length,
-    inProgress: complaints.filter((c) => (c.status || "").toLowerCase() === "in_progress").length,
-    reopened: complaints.filter((c) => (c.status || "").toLowerCase() === "reopened").length,
+    open: complaints.filter((c) => (c.status || "").toLowerCase() === "open")
+      .length,
+    assigned: complaints.filter(
+      (c) => (c.status || "").toLowerCase() === "assigned",
+    ).length,
+    inProgress: complaints.filter(
+      (c) => (c.status || "").toLowerCase() === "in_progress",
+    ).length,
+    reopened: complaints.filter(
+      (c) => (c.status || "").toLowerCase() === "reopened",
+    ).length,
   };
 
   const filteredComplaints = complaints.filter((c) => {
@@ -41,7 +48,8 @@ const AdminDashboard = () => {
     const tag = (c.tag || "").toLowerCase();
     const title = (c.title || "").toLowerCase();
     const id = String(c.complaint_id || "");
-    const matchesStatus = filterStatus === "all" || status === filterStatus.toLowerCase();
+    const matchesStatus =
+      filterStatus === "all" || status === filterStatus.toLowerCase();
     const matchesSearch =
       title.includes(searchQuery.toLowerCase()) ||
       tag.includes(searchQuery.toLowerCase()) ||
@@ -94,10 +102,25 @@ const AdminDashboard = () => {
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[
-            { label: "Total Complaints", value: stats.total, icon: FileText, color: "blue" },
+            {
+              label: "Total Complaints",
+              value: stats.total,
+              icon: FileText,
+              color: "blue",
+            },
             { label: "Open", value: stats.open, icon: Clock, color: "yellow" },
-            { label: "Assigned", value: stats.assigned, icon: TrendingUp, color: "orange" },
-            { label: "In Progress", value: stats.inProgress, icon: CheckCircle, color: "green" },
+            {
+              label: "Assigned",
+              value: stats.assigned,
+              icon: TrendingUp,
+              color: "orange",
+            },
+            {
+              label: "In Progress",
+              value: stats.inProgress,
+              icon: CheckCircle,
+              color: "green",
+            },
           ].map((item, i) => (
             <div
               key={i}
@@ -106,7 +129,9 @@ const AdminDashboard = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-500 text-sm">{item.label}</p>
-                  <h2 className={`text-3xl font-semibold text-${item.color}-600 mt-1`}>
+                  <h2
+                    className={`text-3xl font-semibold text-${item.color}-600 mt-1`}
+                  >
                     {item.value}
                   </h2>
                 </div>
@@ -171,7 +196,10 @@ const AdminDashboard = () => {
               <tbody>
                 {filteredComplaints.length === 0 ? (
                   <tr>
-                    <td colSpan="6" className="text-center py-6 text-gray-500 italic">
+                    <td
+                      colSpan="6"
+                      className="text-center py-6 text-gray-500 italic"
+                    >
                       No complaints found.
                     </td>
                   </tr>
@@ -197,10 +225,14 @@ const AdminDashboard = () => {
                             src={complaint.image}
                             alt="Evidence"
                             className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition"
-                            onClick={() => window.open(complaint.image, "_blank")}
+                            onClick={() =>
+                              window.open(complaint.image, "_blank")
+                            }
                           />
                         ) : (
-                          <span className="text-gray-400 text-xs">No image</span>
+                          <span className="text-gray-400 text-xs">
+                            No image
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-2 text-gray-500">

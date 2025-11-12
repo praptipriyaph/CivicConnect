@@ -27,7 +27,11 @@ const ComplaintDetails = () => {
   const [closing, setClosing] = useState(false);
   const [reopening, setReopening] = useState(false);
 
-  const { data: complaintList = [], isLoading: isListLoading, error: listError } = useQuery({
+  const {
+    data: complaintList = [],
+    isLoading: isListLoading,
+    error: listError,
+  } = useQuery({
     queryKey: ["citizenComplaints"],
     queryFn: apiService.getCitizenComplaints,
     enabled: !initialComplaint,
@@ -35,11 +39,16 @@ const ComplaintDetails = () => {
 
   const resolvedComplaint = useMemo(() => {
     if (initialComplaint) return initialComplaint;
-    return (complaintList || []).find((c) => String(c.complaint_id) === id || String(c.id) === id) || null;
+    return (
+      (complaintList || []).find(
+        (c) => String(c.complaint_id) === id || String(c.id) === id,
+      ) || null
+    );
   }, [initialComplaint, complaintList, id]);
 
   useEffect(() => {
-    if (resolvedComplaint && !complaintView) setComplaintView(resolvedComplaint);
+    if (resolvedComplaint && !complaintView)
+      setComplaintView(resolvedComplaint);
   }, [resolvedComplaint, complaintView]);
 
   const complaintIdForUpdates = complaintView?.complaint_id || id;
@@ -51,8 +60,12 @@ const ComplaintDetails = () => {
 
   const updates = useMemo(() => {
     const sorted = (updatesData || []).slice().sort((a, b) => {
-      const ta = new Date(a.update_time || a.updated_at || a.created_at).getTime();
-      const tb = new Date(b.update_time || b.updated_at || b.created_at).getTime();
+      const ta = new Date(
+        a.update_time || a.updated_at || a.created_at,
+      ).getTime();
+      const tb = new Date(
+        b.update_time || b.updated_at || b.created_at,
+      ).getTime();
       return ta - tb;
     });
     return [...sorted, ...updatesExtra];
@@ -104,7 +117,7 @@ const ComplaintDetails = () => {
     const desc = update.description || "";
     const role = update.role?.toLowerCase() || "";
     const prefixMatch = desc.match(/^\[(.*?)\]/);
-    
+
     if (prefixMatch) {
       const status = prefixMatch[1].trim();
       return status === "undefined" ? update.role : status;
@@ -114,10 +127,9 @@ const ComplaintDetails = () => {
     if (lower.includes("assign")) return "Assigned";
     if (lower.includes("progress") || lower.includes("working"))
       return "In Progress";
-    if (lower.includes("resolve") || lower.includes("fixed"))
-      return "Resolved";
+    if (lower.includes("resolve") || lower.includes("fixed")) return "Resolved";
     if (lower.includes("close")) return "Closed";
-    if (lower.includes("reopen")) return "Lodged"; 
+    if (lower.includes("reopen")) return "Lodged";
     if (role === "citizen") return "Lodged";
     if (role === "admin" || role === "official") return "Assigned";
     return "Lodged";
@@ -143,7 +155,8 @@ const ComplaintDetails = () => {
       setUpdatesExtra((prev) => [
         ...prev,
         {
-          description: "[Closed] Complaint closed by citizen after verification.",
+          description:
+            "[Closed] Complaint closed by citizen after verification.",
           update_time: new Date().toISOString(),
           updated_by: user?.id || "Citizen",
           name: user?.fullName || user?.username || "Citizen",
@@ -170,7 +183,8 @@ const ComplaintDetails = () => {
       setUpdatesExtra((prev) => [
         ...prev,
         {
-          description: "[Lodged] Complaint reopened by citizen for re-evaluation.",
+          description:
+            "[Lodged] Complaint reopened by citizen for re-evaluation.",
           update_time: new Date().toISOString(),
           updated_by: user?.id || "Citizen",
           name: user?.fullName || user?.username || "Citizen",
@@ -196,7 +210,11 @@ const ComplaintDetails = () => {
   if (!complaintView || listError)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen text-gray-500">
-        <p>{listError ? "Failed to load complaint details." : `No complaint found for ID #${id}`}</p>
+        <p>
+          {listError
+            ? "Failed to load complaint details."
+            : `No complaint found for ID #${id}`}
+        </p>
         <button
           onClick={() => navigate(-1)}
           className="mt-4 text-blue-600 hover:underline"
@@ -232,7 +250,9 @@ const ComplaintDetails = () => {
           <div className="flex flex-wrap text-sm text-gray-600 space-x-4 mb-4">
             <span className="flex items-center">
               <MapPin className="w-4 h-4 mr-1" />
-              {complaintView.longitude && complaintView.latitude? `Coordinaties: ${complaintView.longitude}, ${complaintView.latitude}`: "Location not provided"}
+              {complaintView.longitude && complaintView.latitude
+                ? `Coordinaties: ${complaintView.longitude}, ${complaintView.latitude}`
+                : "Location not provided"}
             </span>
             <span className="flex items-center">
               <Calendar className="w-4 h-4 mr-1" />
@@ -255,7 +275,9 @@ const ComplaintDetails = () => {
                 onClick={handleReopenComplaint}
                 disabled={reopening}
                 className={`px-4 py-2 text-white text-sm rounded-md ${
-                  reopening ? "bg-gray-400" : "bg-orange-500 hover:bg-orange-600"
+                  reopening
+                    ? "bg-gray-400"
+                    : "bg-orange-500 hover:bg-orange-600"
                 }`}
               >
                 {reopening ? "Reopening..." : "Reopen Complaint"}
@@ -268,13 +290,17 @@ const ComplaintDetails = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-6">
             Complaint Progress
           </h3>
-
-\          <div className="flex justify-between relative mb-8">
+          \{" "}
+          <div className="flex justify-between relative mb-8">
             <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200"></div>
             {stages.map((s, i) => {
-              const isCompleted = i <= (stageOrder[complaintView.status?.toLowerCase()] ?? 0);
+              const isCompleted =
+                i <= (stageOrder[complaintView.status?.toLowerCase()] ?? 0);
               return (
-                <div key={s} className="relative flex flex-col items-center z-10">
+                <div
+                  key={s}
+                  className="relative flex flex-col items-center z-10"
+                >
                   <div
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                       isCompleted
@@ -295,7 +321,6 @@ const ComplaintDetails = () => {
               );
             })}
           </div>
-
           <div className="space-y-4">
             {updates.length === 0 ? (
               <p className="text-sm text-gray-400 italic">No updates yet.</p>
@@ -322,7 +347,7 @@ const ComplaintDetails = () => {
                       <span className="flex items-center">
                         <Clock className="w-4 h-4 mr-1" />
                         {formatDate(
-                          u.update_time || u.updated_at || u.created_at
+                          u.update_time || u.updated_at || u.created_at,
                         )}
                       </span>
                       <span>•</span>

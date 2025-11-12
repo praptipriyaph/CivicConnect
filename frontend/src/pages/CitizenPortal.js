@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import ComplaintForm from '../components/citizen/ComplaintForm';
-import ComplaintTracking from '../components/citizen/ComplaintTracking';
+import React, { useState } from "react";
+import ComplaintForm from "../components/citizen/ComplaintForm";
+import ComplaintTracking from "../components/citizen/ComplaintTracking";
 
 const CitizenPortal = ({ complaints, onSubmitComplaint }) => {
-  const [activeTab, setActiveTab] = useState('submit');
+  const [activeTab, setActiveTab] = useState("submit");
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -14,24 +14,28 @@ const CitizenPortal = ({ complaints, onSubmitComplaint }) => {
 
       <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
         <button
-          onClick={() => setActiveTab('submit')}
+          onClick={() => setActiveTab("submit")}
           className={`px-4 py-2 rounded-md transition-colors ${
-            activeTab === 'submit' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
+            activeTab === "submit"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-600"
           }`}
         >
           Submit Complaint
         </button>
         <button
-          onClick={() => setActiveTab('track')}
+          onClick={() => setActiveTab("track")}
           className={`px-4 py-2 rounded-md transition-colors ${
-            activeTab === 'track' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-600'
+            activeTab === "track"
+              ? "bg-white text-blue-600 shadow-sm"
+              : "text-gray-600"
           }`}
         >
           Track Complaints
         </button>
       </div>
 
-      {activeTab === 'submit' ? (
+      {activeTab === "submit" ? (
         <ComplaintForm onSubmit={onSubmitComplaint} />
       ) : (
         <ComplaintTracking complaints={complaints} />

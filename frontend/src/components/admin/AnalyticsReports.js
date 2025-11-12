@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -8,33 +8,43 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
-} from 'recharts';
-import { useApiService } from '../../services/api';
-import { useQuery } from '@tanstack/react-query';
+} from "recharts";
+import { useApiService } from "../../services/api";
+import { useQuery } from "@tanstack/react-query";
 
 const AnalyticsReports = () => {
   const apiService = useApiService();
-  const { data: complaints = [], isLoading, error } = useQuery({
-    queryKey: ['allComplaints'],
+  const {
+    data: complaints = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["allComplaints"],
     queryFn: apiService.getAllComplaints,
   });
 
-  const resolved = complaints.filter(c => ['resolved','closed'].includes(c.status?.toLowerCase())).length;
-  const totalPending = complaints.filter(c => !['resolved','closed'].includes(c.status?.toLowerCase())).length;
+  const resolved = complaints.filter((c) =>
+    ["resolved", "closed"].includes(c.status?.toLowerCase()),
+  ).length;
+  const totalPending = complaints.filter(
+    (c) => !["resolved", "closed"].includes(c.status?.toLowerCase()),
+  ).length;
 
   const categories = useMemo(() => {
     const cats = new Set();
-    complaints.forEach(c => {
+    complaints.forEach((c) => {
       if (c.tag) cats.add(c.tag);
     });
     return Array.from(cats);
   }, [complaints]);
 
   const data = useMemo(() => {
-    return categories.map(category => {
-      const total = complaints.filter(c => c.tag === category).length;
+    return categories.map((category) => {
+      const total = complaints.filter((c) => c.tag === category).length;
       const resolved = complaints.filter(
-        c => c.tag === category && ['resolved','closed'].includes(c.status?.toLowerCase())
+        (c) =>
+          c.tag === category &&
+          ["resolved", "closed"].includes(c.status?.toLowerCase()),
       ).length;
       return { category, total, resolved };
     });
@@ -68,7 +78,10 @@ const AnalyticsReports = () => {
         </h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
+            <BarChart
+              data={data}
+              margin={{ top: 20, right: 30, left: 10, bottom: 5 }}
+            >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="category" />
               <YAxis />
@@ -83,9 +96,7 @@ const AnalyticsReports = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="p-4 border border-gray-200 rounded-lg">
-          <h3 className="font-medium mb-3 text-gray-700">
-            Issues by Category
-          </h3>
+          <h3 className="font-medium mb-3 text-gray-700">Issues by Category</h3>
           <div className="space-y-3">
             {data.map(({ category, total, resolved }) => {
               const percentage = total === 0 ? 0 : (resolved / total) * 100;

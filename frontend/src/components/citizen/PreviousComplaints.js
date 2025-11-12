@@ -20,16 +20,20 @@ const PreviousComplaints = () => {
   const navigate = useNavigate();
   const apiService = useApiService();
 
-  const { data: allComplaints = [], isLoading: loading, error } = useQuery({
-    queryKey: ['citizenComplaints'],
-    queryFn: apiService.getCitizenComplaints
+  const {
+    data: allComplaints = [],
+    isLoading: loading,
+    error,
+  } = useQuery({
+    queryKey: ["citizenComplaints"],
+    queryFn: apiService.getCitizenComplaints,
   });
 
   const closedComplaints = useMemo(() => {
     return allComplaints.filter(
       (c) =>
         c.status?.toLowerCase() === COMPLAINT_STATUS.CLOSED.toLowerCase() ||
-        c.status?.toLowerCase() === "resolved"
+        c.status?.toLowerCase() === "resolved",
     );
   }, [allComplaints]);
 
@@ -40,10 +44,8 @@ const PreviousComplaints = () => {
 
   const resolveLocationText = (c) => {
     if (!c) return "Location not provided";
-    if (c.latitude && c.longitude)
-      return `${c.latitude}, ${c.longitude}`;
-    if (c.location && c.location.trim().length > 0)
-      return c.location;
+    if (c.latitude && c.longitude) return `${c.latitude}, ${c.longitude}`;
+    if (c.location && c.location.trim().length > 0) return c.location;
     if (Array.isArray(c.coordinates) && c.coordinates.length === 2)
       return `${c.coordinates[0]}, ${c.coordinates[1]}`;
     return "Location not provided";
@@ -65,10 +67,8 @@ const PreviousComplaints = () => {
     if (selectedCategory !== "all") {
       result = result.filter(
         (c) =>
-          (c.category || "")
-            .toString()
-            .trim()
-            .toLowerCase() === selectedCategory.trim().toLowerCase()
+          (c.category || "").toString().trim().toLowerCase() ===
+          selectedCategory.trim().toLowerCase(),
       );
     }
 
@@ -83,7 +83,7 @@ const PreviousComplaints = () => {
 
   const paginated = filteredAndSorted.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
 
@@ -192,8 +192,7 @@ const PreviousComplaints = () => {
 
               <div className="flex justify-between text-xs text-gray-500 mt-2">
                 <span className="flex items-center">
-                  <MapPin className="w-4 h-4 mr-1" />{" "}
-                  {resolveLocationText(c)}
+                  <MapPin className="w-4 h-4 mr-1" /> {resolveLocationText(c)}
                 </span>
                 <span className="flex items-center">
                   <Calendar className="w-4 h-4 mr-1" />{" "}

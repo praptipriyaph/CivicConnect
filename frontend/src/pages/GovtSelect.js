@@ -1,26 +1,26 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useApiService } from '../services/api';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useApiService } from "../services/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 const GovtSelect = () => {
-  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState("");
   const navigate = useNavigate();
   const api = useApiService();
   const queryClient = useQueryClient();
 
   const { data: departments = [], isLoading } = useQuery({
-    queryKey: ['departments'],
+    queryKey: ["departments"],
     queryFn: api.getDepartments,
   });
 
   const setDept = useMutation({
     mutationFn: (id) => api.setGovernmentDepartment(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['govComplaints'] });
-      navigate('/gov-portal');
+      queryClient.invalidateQueries({ queryKey: ["govComplaints"] });
+      navigate("/gov-portal");
     },
-    onError: () => alert('Error assigning department'),
+    onError: () => alert("Error assigning department"),
   });
 
   const handleSubmit = (e) => {

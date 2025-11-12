@@ -1,20 +1,28 @@
-import React, { useState } from 'react';
-import { FileText, Clock, TrendingUp, CheckCircle, Eye, Edit } from 'lucide-react';
-import StatusBadge from '../common/StatusBadge';
-import PriorityBadge from '../common/PriorityBadge';
+import React, { useState } from "react";
+import {
+  FileText,
+  Clock,
+  TrendingUp,
+  CheckCircle,
+  Eye,
+  Edit,
+} from "lucide-react";
+import StatusBadge from "../common/StatusBadge";
+import PriorityBadge from "../common/PriorityBadge";
 
 const AdminDashboard = ({ complaints, onUpdateComplaint }) => {
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState("all");
 
-  const filteredComplaints = complaints.filter(complaint => 
-    filterStatus === 'all' || complaint.status.toLowerCase() === filterStatus
+  const filteredComplaints = complaints.filter(
+    (complaint) =>
+      filterStatus === "all" || complaint.status.toLowerCase() === filterStatus,
   );
 
   const stats = {
     total: complaints.length,
-    pending: complaints.filter(c => c.status === 'Pending').length,
-    inProgress: complaints.filter(c => c.status === 'In Progress').length,
-    resolved: complaints.filter(c => c.status === 'Resolved').length
+    pending: complaints.filter((c) => c.status === "Pending").length,
+    inProgress: complaints.filter((c) => c.status === "In Progress").length,
+    resolved: complaints.filter((c) => c.status === "Resolved").length,
   };
 
   return (
@@ -29,32 +37,38 @@ const AdminDashboard = ({ complaints, onUpdateComplaint }) => {
             <FileText className="w-8 h-8 text-blue-600" />
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-semibold text-yellow-600">{stats.pending}</p>
+              <p className="text-2xl font-semibold text-yellow-600">
+                {stats.pending}
+              </p>
             </div>
             <Clock className="w-8 h-8 text-yellow-600" />
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">In Progress</p>
-              <p className="text-2xl font-semibold text-blue-600">{stats.inProgress}</p>
+              <p className="text-2xl font-semibold text-blue-600">
+                {stats.inProgress}
+              </p>
             </div>
             <TrendingUp className="w-8 h-8 text-blue-600" />
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow-md">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Resolved</p>
-              <p className="text-2xl font-semibold text-green-600">{stats.resolved}</p>
+              <p className="text-2xl font-semibold text-green-600">
+                {stats.resolved}
+              </p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
@@ -90,7 +104,7 @@ const AdminDashboard = ({ complaints, onUpdateComplaint }) => {
               </tr>
             </thead>
             <tbody>
-              {filteredComplaints.map(complaint => (
+              {filteredComplaints.map((complaint) => (
                 <tr key={complaint.id} className="border-t">
                   <td className="px-4 py-2">#{complaint.id}</td>
                   <td className="px-4 py-2">{complaint.title}</td>

@@ -1,7 +1,12 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Building, User, Bell } from 'lucide-react';
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react';
+import React from "react";
+import { Link } from "react-router-dom";
+import { Building, User, Bell } from "lucide-react";
+import {
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  UserButton,
+} from "@clerk/clerk-react";
 
 const Header = ({ onProfileClick }) => {
   return (
@@ -20,13 +25,12 @@ const Header = ({ onProfileClick }) => {
 
         <div className="flex items-center space-x-4">
           <SignedIn>
-
             <UserButton
               afterSignOutUrl="/"
               appearance={{
                 elements: {
-                  avatarBox: "w-8 h-8"
-                }
+                  avatarBox: "w-8 h-8",
+                },
               }}
             />
           </SignedIn>

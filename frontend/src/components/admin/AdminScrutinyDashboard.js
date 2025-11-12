@@ -18,7 +18,7 @@ const departments = ["Roads", "Water", "Waste", "Electricity", "Health"];
 const AdminScrutinyDashboard = () => {
   const apiService = useApiService();
   const [sortOrder, setSortOrder] = useState("desc");
-  const [filterCategory, setFilterCategory] = useState("all"); 
+  const [filterCategory, setFilterCategory] = useState("all");
   const [filterStatus, setFilterStatus] = useState("assigned");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
@@ -34,19 +34,21 @@ const AdminScrutinyDashboard = () => {
   };
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['adminComplaints'],
+    queryKey: ["adminComplaints"],
     queryFn: apiService.getAdminComplaints,
   });
   const complaints = data || [];
 
   const assignMutation = useMutation({
     mutationFn: (payload) => apiService.adminUpdateComplaint(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminComplaints'] })
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["adminComplaints"] }),
   });
 
   const closeMutation = useMutation({
     mutationFn: (payload) => apiService.closeComplaint(payload),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminComplaints'] })
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["adminComplaints"] }),
   });
 
   const handleAssign = async (complaintId, dept) => {
@@ -78,7 +80,8 @@ const AdminScrutinyDashboard = () => {
 
   const handleClose = async (complaintId) => {
     const reason = prompt("Enter reason for closing this complaint:");
-    if (!reason || !reason.trim()) return alert("Closing reason cannot be empty.");
+    if (!reason || !reason.trim())
+      return alert("Closing reason cannot be empty.");
 
     if (closeMutation.isLoading) return;
 
@@ -104,13 +107,13 @@ const AdminScrutinyDashboard = () => {
 
     if (filterCategory && filterCategory !== "all") {
       result = result.filter(
-        (c) => c.tag?.toLowerCase() === filterCategory.toLowerCase()
+        (c) => c.tag?.toLowerCase() === filterCategory.toLowerCase(),
       );
     }
 
     if (filterStatus && filterStatus !== "all") {
       result = result.filter(
-        (c) => c.status?.toLowerCase() === filterStatus.toLowerCase()
+        (c) => c.status?.toLowerCase() === filterStatus.toLowerCase(),
       );
     }
 
@@ -126,7 +129,7 @@ const AdminScrutinyDashboard = () => {
   const totalPages = Math.ceil(filteredAndSorted.length / itemsPerPage);
   const paginatedComplaints = filteredAndSorted.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   const openComplaints = complaints.filter((c) => {
@@ -205,7 +208,12 @@ const AdminScrutinyDashboard = () => {
               >
                 <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2">
                   <h3 className="font-medium text-gray-900">
-                    {complaint.title} (#{String(complaint.complaint_id || complaint.id || "").slice(0, 8)})
+                    {complaint.title} (#
+                    {String(complaint.complaint_id || complaint.id || "").slice(
+                      0,
+                      8,
+                    )}
+                    )
                   </h3>
                   <StatusBadge status={complaint.status} />
                 </div>
@@ -230,7 +238,7 @@ const AdminScrutinyDashboard = () => {
                           complaint.image.startsWith("http")
                             ? complaint.image
                             : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/complaint_images/${complaint.image}`,
-                          "_blank"
+                          "_blank",
                         )
                       }
                     />
@@ -261,14 +269,19 @@ const AdminScrutinyDashboard = () => {
                     onClick={() =>
                       handleAssign(
                         complaint.complaint_id,
-                        document.getElementById(`dept-${complaint.complaint_id}`)
-                          .value
+                        document.getElementById(
+                          `dept-${complaint.complaint_id}`,
+                        ).value,
                       )
                     }
-                    disabled={assigningId === complaint.complaint_id || assignMutation.isLoading}
+                    disabled={
+                      assigningId === complaint.complaint_id ||
+                      assignMutation.isLoading
+                    }
                     className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm flex-shrink-0 mt-2 sm:mt-0 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    {(assigningId === complaint.complaint_id && assignMutation.isLoading) ? (
+                    {assigningId === complaint.complaint_id &&
+                    assignMutation.isLoading ? (
                       <>
                         <Loader className="w-4 h-4 mr-2 animate-spin" />
                         Assigning...
@@ -279,10 +292,14 @@ const AdminScrutinyDashboard = () => {
                   </button>
                   <button
                     onClick={() => handleClose(complaint.complaint_id)}
-                    disabled={closingId === complaint.complaint_id || closeMutation.isLoading}
+                    disabled={
+                      closingId === complaint.complaint_id ||
+                      closeMutation.isLoading
+                    }
                     className="px-3 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-md text-sm flex-shrink-0 mt-2 sm:mt-0 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center"
                   >
-                    {(closingId === complaint.complaint_id && closeMutation.isLoading) ? (
+                    {closingId === complaint.complaint_id &&
+                    closeMutation.isLoading ? (
                       <>
                         <Loader className="w-4 h-4 mr-2 animate-spin" />
                         Closing...
@@ -358,7 +375,12 @@ const AdminScrutinyDashboard = () => {
             >
               <div className="flex justify-between items-start">
                 <h3 className="font-medium text-gray-900">
-                  {complaint.title} (#{String(complaint.complaint_id || complaint.id || "").slice(0, 8)})
+                  {complaint.title} (#
+                  {String(complaint.complaint_id || complaint.id || "").slice(
+                    0,
+                    8,
+                  )}
+                  )
                 </h3>
                 <StatusBadge status={complaint.status} />
               </div>
@@ -386,7 +408,7 @@ const AdminScrutinyDashboard = () => {
                       complaint.image.startsWith("http")
                         ? complaint.image
                         : `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/complaint_images/${complaint.image}`,
-                      "_blank"
+                      "_blank",
                     )
                   }
                 />
@@ -414,9 +436,7 @@ const AdminScrutinyDashboard = () => {
               Page {currentPage} of {totalPages}
             </span>
             <button
-              onClick={() =>
-                setCurrentPage((p) => Math.min(p + 1, totalPages))
-              }
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
               disabled={currentPage === totalPages}
               className="p-2 bg-blue-100 rounded disabled:opacity-50"
             >
