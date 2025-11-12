@@ -49,19 +49,6 @@ async function getUserFromAuth(req) {
   return { clerk_id, username };
 }
 
-// app.get("/",requireAuth(),async (req,res)=>{
-//     // if(!req.auth.userId){
-//     //     res.send("Failure!")
-//     // }
-//   const {userId} = getAuth(req)
-//   const {username} = await clerkClient.users.getUser(userId)
-
-//   console.log("WPIDHAWI")
-//   console.log(userId,username)
-
-//     res.json({username})
-// })
-
 app.post("/api/save-user", requireAuth(), async (req, res) => {
   try {
     console.log("API HIT - Save User");
