@@ -1,6 +1,7 @@
 import { useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 
+console.log("THIS IS MY API URL TO BE HIT",process.env.REACT_APP_API_URL)
 
 class ApiService {
   constructor() {

@@ -15,6 +15,8 @@ if (!PUBLISHABLE_KEY) {
   throw new Error("Missing Publishable Key");
 }
 
+console.log(PUBLISHABLE_KEY)
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
